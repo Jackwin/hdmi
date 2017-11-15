@@ -1,5 +1,5 @@
-#include "../terasic_lib/terasic_includes.h"
-#include "mcu.h"
+#include "../../terasic_lib/terasic_includes.h"
+#include "../mcu.h"
 #include "it6613_sys.h"
 #include "hdmitx.h"
 #include "HDMI_TX.h"

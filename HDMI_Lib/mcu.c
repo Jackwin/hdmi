@@ -1,9 +1,12 @@
-#include "terasic_includes.h"
+#include "../terasic_lib/terasic_includes.h"
 #include "mcu.h"
 #include "typedef.h"
-#include "i2c.h"
-#include "it6613_drv.h"
+#include "../terasic_lib/i2c.h"
+#include "./HDMI_TX/it6613_drv.h"
 //#include "it6605.h"
+//chunjie add
+#define HDMI_TX_I2C_CLOCK PIO_I2C_SCL_BASE
+#define HDMI_TX_I2C_DATA PIO_I2C_SDA_BASE
 
 #define Switch_HDMITX_Bank(x)   HDMITX_WriteI2C_Byte(0x0f,(x)&1)
 
@@ -85,11 +88,11 @@ void OS_PRINTF(char *fmt,...){
 
 void HDMITX_Reset(void){
     OS_PRINTF("TX hardware Reset\n");
-    IOWR(HDMI_TX_RESET_N_BASE, 0, 1);
+    IOWR(HDMI_TX_RST_N_BASE, 0, 1);
     usleep(20*1000);
-    IOWR(HDMI_TX_RESET_N_BASE, 0, 0);
+    IOWR(HDMI_TX_RST_N_BASE, 0, 0);
     usleep(20*1000);
-    IOWR(HDMI_TX_RESET_N_BASE, 0, 1);
+    IOWR(HDMI_TX_RST_N_BASE, 0, 1);
     usleep(20*1000);
 }
 
@@ -166,17 +169,17 @@ HDMITX_WriteI2C_ByteN(BYTE RegAddr,BYTE *pData,int N)
 }
 
 
-#if 1  // enable RX API
+#if 0 // enable RX API
 
 
 void HDMIRX_Reset(void){
     OS_PRINTF("RX hardware Reset\n");
     
-    IOWR(HDMI_RX_RESET_N_BASE, 0, 1);
+    IOWR(HDMI_TX_RST_N_BASE, 0, 1);
     usleep(20*1000);
-    IOWR(HDMI_RX_RESET_N_BASE, 0, 0);
+    IOWR(HDMI_TX_RST_N_BASE, 0, 0);
     usleep(20*1000);
-    IOWR(HDMI_RX_RESET_N_BASE, 0, 1);
+    IOWR(HDMI_TX_RST_N_BASE, 0, 1);
     usleep(20*1000);
 }
 
@@ -420,7 +423,8 @@ I2C_Write_ByteN(BYTE Addr,BYTE RegAddr,BYTE *pData,int N)
 }
 
 #define EEPROM_DEVICE_ADDR  0xA0
-
+//chunjie comments
+/*
 bool HDMIRX_EEPROM0_WriteI2C_Byte(alt_u8 RegAddr,alt_u8 Data){
     bool bSuccess;
     bSuccess = I2C_Write(HDMI_RX0_EP_SCL_BASE, HDMI_RX0_EP_SDA_BASE, EEPROM_DEVICE_ADDR, RegAddr, Data);
@@ -444,5 +448,5 @@ bool HDMIRX_EEPROM1_ReadI2C_Byte(alt_u8 RegAddr, alt_u8 *pData){
     bSuccess = I2C_Read(HDMI_RX1_EP_SCL_BASE, HDMI_RX1_EP_SDA_BASE, EEPROM_DEVICE_ADDR, RegAddr, pData);
     return bSuccess;    
 }
-
+*/
 

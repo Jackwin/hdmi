@@ -28,10 +28,10 @@ void HDMITX_DumpReg(int RegIndex);
 
 bool ReadRXIntPin(void);
 
-#define HDMI_TX_I2C_CLOCK   HDMI_TX_I2C_SCL_BASE
-#define HDMI_TX_I2C_DATA    HDMI_TX_I2C_SDA_BASE
-#define HDMI_RX_I2C_CLOCK   HDMI_RX_I2C_SCL_BASE
-#define HDMI_RX_I2C_DATA    HDMI_RX_I2C_SDA_BASE
+//#define HDMI_TX_I2C_CLOCK   HDMI_TX_I2C_SCL_BASE
+//#define HDMI_TX_I2C_DATA    HDMI_TX_I2C_SDA_BASE
+//#define HDMI_RX_I2C_CLOCK   HDMI_RX_I2C_SCL_BASE
+//#define HDMI_RX_I2C_DATA    HDMI_RX_I2C_SDA_BASE
 
 bool HDMIRX_EEPROM0_WriteI2C_Byte(alt_u8 RegAddr,alt_u8 Data);
 bool HDMIRX_EEPROM1_WriteI2C_Byte(alt_u8 RegAddr,alt_u8 Data);

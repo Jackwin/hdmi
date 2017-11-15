@@ -13,8 +13,10 @@
 							<builder buildPath="${workspace_loc://hdmi}" id="altera.tool.gnu.builder.mingw.1063325711" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="altera.tool.gnu.builder.mingw"/>
 							<tool id="altera.tool.gnu.c.compiler.mingw.1822233765" name="Nios II GCC C Compiler" superClass="altera.tool.gnu.c.compiler.mingw">
 								<option id="gnu.c.compiler.option.include.paths.773793650" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;E:\chunjie\fast-wps\niosII_fast_wps\software\fast_wps_bsp&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\chunjie\fast-wps\niosII_fast_wps\software\hdmi\HDMI_Lib&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;E:\chunjie\fast-wps\niosII_fast_wps\software\test7_bsp\HAL\inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\chunjie\fast-wps\niosII_fast_wps\software\test7_bsp&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\chunjie\fast-wps\niosII_fast_wps\software\hdmi\terasic_lib&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.2009399420" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>

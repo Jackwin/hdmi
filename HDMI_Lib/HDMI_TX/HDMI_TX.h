@@ -1,7 +1,7 @@
 #ifndef HDMI_TX_H_
 #define HDMI_TX_H_
 
-#include "HDMI_COMMON.h"
+#include "../HDMI_COMMON.h"
 
 
 

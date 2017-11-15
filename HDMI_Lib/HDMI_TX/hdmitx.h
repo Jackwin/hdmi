@@ -41,7 +41,7 @@
     #include "pc.h"
 #endif // MCU
 
-#include "typedef.h"
+#include "../typedef.h"
 #include "edid.h"
 // #include "dss_sha.h"
 #include "it6613_drv.h"
