@@ -18,7 +18,7 @@ module fast_wps_nios_top (
     inout           hdmi_pcsda,
     output          hdmi_pcscl,
     // Digital vide
-    output          hdmi_pclk,
+    output          hdmi_tx_pclk,
     output [11:0]   hdmi_tx_rd,
     output [11:0]   hdmi_tx_gd,
     output [11:0]   hdmi_tx_bd,
@@ -84,7 +84,7 @@ wire        [7:0]       vpg_b;
 
 
 vpg vpg_inst(
-                    .clk_100    (pll_100M),
+                    .clk_100m    (clk_100m),
                     .reset_n    (reset_n),
                     .mode       (vpg_disp_mode),
                     .mode_change(vpg_disp_mode_change),
@@ -99,26 +99,13 @@ vpg vpg_inst(
                     );
 
 //===== source selection, from pattern generator or hdmi-rx
-wire     rx_sync;
 
-clk_slector clk_slector_inst(
-                                      .data0 (~vpg_pclk),
-                                      .data1 (1'b0),
-                                      .sel   (rx_sync),
-                                      .result(HDMI_TX_PCLK)
-                                    );
-
+assign hdmi_tx_pclk = ~vpg_pclk;
 source_selector source_selector_inst(
                                                  .data0x({vpg_de, vpg_hs, vpg_vs, vpg_r, 4'b0000, vpg_g, 4'b0000, vpg_b, 4'b0000}),
                                                  .data1x({1'b1, 1'b1, 1'b1,,,}),
-                                                 .sel   (rx_sync),
-                                                 .result({HDMI_TX_DE, HDMI_TX_HS, HDMI_TX_VS, HDMI_TX_RD,HDMI_TX_GD,HDMI_TX_BD})
+                                                 .sel   (1'b0),
+                                                 .result({hdmi_tx_de, hdmi_tx_hs,hdmi_tx_vs,hdmi_tx_rd,hdmi_tx_gd,hdmi_tx_bd})
                                                 );
-
-assign HDMI_TX_SCK = gen_sck;
-assign HDMI_TX_I2S = {gen_i2s, gen_i2s, gen_i2s, gen_i2s};
-assign HDMI_TX_WS  = gen_ws;
-
-
 
 endmodule
