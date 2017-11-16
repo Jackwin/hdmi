@@ -5,11 +5,27 @@ module fast_wps_nios_top (
     output [7:0]    led_o,
     output          shrink_led,
     output          pll_led,
-    inout           pio_iic_sda,
-    output          pio_iic_scl,
+
     output          iic_sda,
     inout           iic_scl,
-    output          hdmi_tx_rst_n
+
+
+    //HDMI programming ports
+    output          hdmi_tx_rst_n,
+    output          hdmi_int_n,
+    //inout           pio_iic_sda,
+    //output          pio_iic_scl,
+    inout           hdmi_pcsda,
+    output          hdmi_pcscl,
+    // Digital vide
+    output          hdmi_pclk,
+    output [11:0]   hdmi_tx_rd,
+    output [11:0]   hdmi_tx_gd,
+    output [11:0]   hdmi_tx_bd,
+    output          hdmi_tx_de,
+    output          hdmi_tx_vs,
+    output          hdmi_tx_hs
+
 );
 
 wire            clk_100m;
@@ -25,8 +41,8 @@ assign pll_led = ~pll_locked;
 nios nios_i (
     .clk_clk(clk50m_in),
     .reset_reset_n(reset_n),
-     .pio_i2c_scl_export(pio_iic_scl),
-     .pio_i2c_sda_export(pio_iic_sda),
+     .pio_i2c_scl_export(hdmi_pcscl),
+     .pio_i2c_sda_export(hdmi_pcsda),
     .i2c_scl(iic_scl),
     .i2c_sda(iic_sda),
     .led_export(led_o),

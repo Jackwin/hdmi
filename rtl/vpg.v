@@ -34,8 +34,10 @@
 `include "vpg.h"
 
 module vpg(
-input               clk_148_5,
+input               clk_100m,
 input               reset_n,
+
+input               time_gen,
 
 input  [3:0]        mode,
 input               mode_change,
@@ -52,8 +54,13 @@ output    [7:0]     vpg_b
 
 reg    [3:0]        config_state;
 reg    [3:0]        disp_mode;
-reg     [2:0]    timing_change_dur;
-reg                timing_change;
+reg     [2:0]       timing_change_dur;
+
+// timing_change is a pulse
+reg                 time_gen_r;
+reg                 timing_change;
+wire                clk_148_5;
+wire                vpg_pll_locked;
 
 //============= assign timing constant
 
@@ -80,11 +87,23 @@ reg               frame_interlaced;
 // ______|  |__________
 //       sync (hs/vs)
 
- assign {h_disp, h_fporch, h_sync, h_bporch} = {12'd1920, 12'd88, 12'd44, 12'd148};// total: 2200
- assign {v_disp, v_fporch, v_sync, v_bporch} <= {12'd1080,  12'd4, 12'd5,  12'd36};// total: 1125
- assign {frame_interlaced, vs_polarity, hs_polarity} = 3'b011;
 
+always @(clk_148_5 or negedge reset_n) begin
+    if (~reset_n) begin
+        {h_disp, h_fporch, h_sync, h_bporch} <= 'h0;
+        {v_disp, v_fporch, v_sync, v_bporch} <= 'h0;
+        {frame_interlaced, vs_polarity, hs_polarity} <= 'h0;
+        timing_change <= 1'b0;
+    end
+    else begin
+        {h_disp, h_fporch, h_sync, h_bporch} <= {12'd1920, 12'd88, 12'd44, 12'd148};// total: 2200
+        {v_disp, v_fporch, v_sync, v_bporch} <= {12'd1080,  12'd4, 12'd5,  12'd36};// total: 1125
+        {frame_interlaced, vs_polarity, hs_polarity} <= 3'b011;
+        time_gen_r <= time_gen;
 
+        timing_change <= ~time_gen_r & time_gen;
+    end
+end
 
 //============ pattern generator: vga timming generator
 
@@ -96,11 +115,18 @@ wire                 time_de;
 wire     [11:0]    time_x;
 wire     [11:0]    time_y;
 
+pll_vpg pll_vpg_i (
+    .refclk   (clk_100m),   //  refclk.clk
+    .rst      (~reset_n),      //   reset.reset
+    .outclk_0 (clk_148_5), // outclk0.clk  148.5MHz
+    .locked   (vpg_pll_locked)    //  locked.export
+);
+
 
 vga_time_generator vga_time_generator_inst(
 
    .clk(clk_148_5),
-   .reset_n(reset_n),
+   .reset_n(~vpg_pll_locked),
    .timing_change(timing_change),
 
    .h_disp( h_disp),
@@ -138,7 +164,7 @@ wire [7:0]    gen_b;
 
 //convert time: 1-clock
 pattern_gen pattern_gen_inst(
-    .reset_n(reset_n),
+    .reset_n(~vpg_pll_locked),
     .pixel_clk(clk_148_5),
     .pixel_de(time_de),
     .pixel_hs(time_hs),
@@ -158,7 +184,7 @@ pattern_gen pattern_gen_inst(
 
 
 //===== output
-assign vpg_pclk = gen_clk;
+assign vpg_pclk = clk_148_5;
 assign vpg_de     = gen_de;
 assign vpg_hs     = gen_hs;
 assign vpg_vs     = gen_vs;
