@@ -262,11 +262,11 @@ module s5_golden_top
    output         hsma_clk_out_p2,     //LVDS    //Primary Source-Sync CLKOUT
    inout    [3:0] hsma_d,              //2.5V    //Dedicated CMOS IO
    input          hsma_prsntn,         //2.5V    //HSMC Presence Detect Input
-   //output   [16:1] hsma_rx_d_p,         //LVDS    //LVDS Sounce-Sync Input
-    output     [16:0]     hsma_rx_d_p,
-    output     [16:0]     hsma_rx_d_n,
-    output [16:0] hsma_tx_d_n,
-   output  [16:0] hsma_tx_d_p,         //LVDS    //LVDS Sounce-Sync Output
+   //output   [16:1] hsma_rx_p,         //LVDS    //LVDS Sounce-Sync Input
+    output     [16:0]     hsma_rx_p,
+    output     [16:0]     hsma_rx_n,
+    output [16:0] hsma_tx_n,
+   output  [16:0] hsma_tx_p,         //LVDS    //LVDS Sounce-Sync Output
    output         hsma_rx_led,         //2.5V    //User LED - Labeled RX
    output         hsma_scl,            //2.5V    //SMBus Clock
    inout          hsma_sda,            //2.5V    //SMBus Data
@@ -342,50 +342,51 @@ assign user_led_r[7:4] = 6'b1111;
 assign user_led_r[3] = iic_scl;
 assign user_led_r[2]= iic_sda;
 //---------------------------------
-assign hsma_tx_d_p[1] = hdmi_tx_rd[11];
-assign hsma_tx_d_n[1] = hdmi_tx_rd[10];
-assign hsma_tx_d_p[2] = hdmi_tx_rd[9]
-assign hsma_tx_d_n[2] = hdmi_tx_rd[8];
-assign hsma_tx_d_p[3] = hdmi_tx_rd[7];
-assign hsma_tx_d_n[3] = hdmi_tx_rd[6];
-assign hsma_tx_d_p[4] = hdmi_tx_rd[5];
-assign hsma_tx_d_n[4] = hdmi_tx_rd[4];
-assign hsma_tx_d_p[5] = hdmi_tx_rd[3];
-assign hsma_tx_d_n[5] = hdmi_tx_rd[2];
-assign hsma_tx_d_p[6] = hdmi_tx_rd[1];
-assign hsma_tx_d_n[6] = hdmi_tx_rd[0];
+assign hsma_rx_p[7] = hdmi_tx_pclk;
+assign hsma_tx_p[1] = hdmi_tx_rd[11];
+assign hsma_tx_n[1] = hdmi_tx_rd[10];
+assign hsma_tx_p[2] = hdmi_tx_rd[9];
+assign hsma_tx_n[2] = hdmi_tx_rd[8];
+assign hsma_tx_p[3] = hdmi_tx_rd[7];
+assign hsma_tx_n[3] = hdmi_tx_rd[6];
+assign hsma_tx_p[4] = hdmi_tx_rd[5];
+assign hsma_tx_n[4] = hdmi_tx_rd[4];
+assign hsma_tx_p[5] = hdmi_tx_rd[3];
+assign hsma_tx_n[5] = hdmi_tx_rd[2];
+assign hsma_tx_p[6] = hdmi_tx_rd[1];
+assign hsma_tx_n[6] = hdmi_tx_rd[0];
 
-assign hsma_tx_d_p[8] = hdmi_tx_gd[11];
-assign hsma_tx_d_n[8] = hdmi_tx_gd[10];
-assign hsma_tx_d_p[9] = hdmi_tx_gd[9];
-assign hsma_tx_d_n[9] = hdmi_tx_gd[8];
-assign hsma_tx_d_p[10] = hdmi_tx_gd[7];
-assign hsma_tx_d_n[10] = hdmi_tx_gd[6];
-assign hsma_tx_d_p[11] = hdmi_tx_gd[5];
-assign hsma_tx_d_n[11] = hdmi_tx_gd[4];
-assign hsma_tx_d_p[12] = hdmi_tx_gd[3];
-assign hsma_tx_d_n[12] = hdmi_tx_gd[2];
-assign hsma_tx_d_p[13] = hdmi_tx_gd[1];
-assign hsma_tx_d_n[13] = hdmi_tx_gd[0];
+assign hsma_tx_p[8] = hdmi_tx_gd[11];
+assign hsma_tx_n[8] = hdmi_tx_gd[10];
+assign hsma_tx_p[9] = hdmi_tx_gd[9];
+assign hsma_tx_n[9] = hdmi_tx_gd[8];
+assign hsma_tx_p[10] = hdmi_tx_gd[7];
+assign hsma_tx_n[10] = hdmi_tx_gd[6];
+assign hsma_tx_p[11] = hdmi_tx_gd[5];
+assign hsma_tx_n[11] = hdmi_tx_gd[4];
+assign hsma_tx_p[12] = hdmi_tx_gd[3];
+assign hsma_tx_n[12] = hdmi_tx_gd[2];
+assign hsma_tx_p[13] = hdmi_tx_gd[1];
+assign hsma_tx_n[13] = hdmi_tx_gd[0];
 
-assign hsma_tx_d_p[14] = hdmi_tx_bd[11];
-assign hsma_rx_d_p[9] = hdmi_tx_bd[10];
-assign hsma_rx_d_n[9] = hdmi_tx_bd[9];
-assign hsma_rx_d_p[10] = hdmi_tx_bd[8];
-assign hsma_rx_d_n[10] = hdmi_tx_bd[7];
-assign hsma_rx_d_p[11] = hdmi_tx_bd[6];
-assign hsma_rx_d_n[11] = hdmi_tx_bd[5];
-assign hsma_rx_d_p[12] = hdmi_tx_bd[4];
-assign hsma_rx_d_n[12] = hdmi_tx_bd[3];
-assign hsma_rx_d_p[13] = hdmi_tx_bd[2];
-assign hsma_rx_d_n[13] = hdmi_tx_bd[1];
-assign hsma_rx_d_p[14] = hdmi_tx_bd[0];
+assign hsma_tx_p[14] = hdmi_tx_bd[11];
+assign hsma_rx_p[9] = hdmi_tx_bd[10];
+assign hsma_rx_n[9] = hdmi_tx_bd[9];
+assign hsma_rx_p[10] = hdmi_tx_bd[8];
+assign hsma_rx_n[10] = hdmi_tx_bd[7];
+assign hsma_rx_p[11] = hdmi_tx_bd[6];
+assign hsma_rx_n[11] = hdmi_tx_bd[5];
+assign hsma_rx_p[12] = hdmi_tx_bd[4];
+assign hsma_rx_n[12] = hdmi_tx_bd[3];
+assign hsma_rx_p[13] = hdmi_tx_bd[2];
+assign hsma_rx_n[13] = hdmi_tx_bd[1];
+assign hsma_rx_p[14] = hdmi_tx_bd[0];
 
-assign hsma_rx_d_n[14] = hdmi_tx_de;
-assign hsma_rx_d_p[15] = hdmi_tx_hs;
-assign hsma_rx_d_n[15] = hdmi_tx_vs;
-assign hsma_rx_d_n[0] = hdmi_tx_rst_n;
-assign hsma_rx_d_p[1] = hdmi_tx_int_n;
+assign hsma_rx_n[14] = hdmi_tx_de;
+assign hsma_rx_p[15] = hdmi_tx_hs;
+assign hsma_rx_n[15] = hdmi_tx_vs;
+assign hsma_rx_n[0] = hdmi_tx_rst_n;
+assign hsma_rx_p[1] = hdmi_tx_int_n;
 
 
 fast_wps_nios_top fast_wps_nios_top_i (

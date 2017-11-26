@@ -37,6 +37,7 @@
 
 #include <stdio.h>
 #include "./terasic_lib/terasic_includes.h"
+#include "./terasic_lib/I2C.h"
 #include "./HDMI_lib/mcu.h"
 #include "system.h"
 #include "./HDMI_lib/HDMI_TX/HDMI_TX.h"
@@ -124,7 +125,7 @@ typedef enum{
             }VPG_COLOR;
 
 
-VPG_MODE gVpgMode = MODE_720x480;   //MODE_1920x1080;
+VPG_MODE gVpgMode = MODE_1920x1080;   //MODE_1920x1080;
 COLOR_TYPE gVpgColor = COLOR_RGB444;// video pattern generator - output color (defined ind vpg.v)
 
 
@@ -298,8 +299,14 @@ int main()
         bHwNg = TRUE;
         //return 0;
     }
+    /*
+    bool bSuccess = I2C_Write(PIO_I2C_SCL_BASE, PIO_I2C_SDA_BASE, 0x98, 0x010, 0x01);
 
+    alt_u8 *ucdata;
 
+    bSuccess = I2C_Read(PIO_I2C_SCL_BASE, PIO_I2C_SDA_BASE, 0x98,0x10, ucdata);
+
+*/
 /*
     IOWR(HDMI_RX_SYNC_BASE, 0,0x00);
     led_mask = ~0x01;

@@ -37,10 +37,11 @@ module vpg(
 input               clk_100m,
 input               reset_n,
 
+input               time_gen,
+
 input  [3:0]        mode,
 input               mode_change,
 input  [1:0]        disp_color,
-output              vpg_locked,
 output              vpg_pclk,
 output              vpg_de,
 output              vpg_hs,
@@ -58,8 +59,8 @@ reg     [2:0]       timing_change_dur;
 // timing_change is a pulse
 reg                 time_gen_r;
 reg                 timing_change;
-wire                clk_148_5/*synthesis keep*/;
-wire                vpg_pll_locked/*synthesis keep*/;
+wire                clk_148_5;
+wire                vpg_pll_locked;
 
 //============= assign timing constant
 
@@ -87,16 +88,20 @@ reg               frame_interlaced;
 //       sync (hs/vs)
 
 
-always @(posedge clk_148_5 or negedge reset_n) begin
+always @(clk_148_5 or negedge reset_n) begin
     if (~reset_n) begin
         {h_disp, h_fporch, h_sync, h_bporch} <= 'h0;
         {v_disp, v_fporch, v_sync, v_bporch} <= 'h0;
         {frame_interlaced, vs_polarity, hs_polarity} <= 'h0;
+        timing_change <= 1'b0;
     end
     else begin
         {h_disp, h_fporch, h_sync, h_bporch} <= {12'd1920, 12'd88, 12'd44, 12'd148};// total: 2200
         {v_disp, v_fporch, v_sync, v_bporch} <= {12'd1080,  12'd4, 12'd5,  12'd36};// total: 1125
         {frame_interlaced, vs_polarity, hs_polarity} <= 3'b011;
+        time_gen_r <= time_gen;
+
+        timing_change <= ~time_gen_r & time_gen;
     end
 end
 
@@ -116,13 +121,13 @@ pll_vpg pll_vpg_i (
     .outclk_0 (clk_148_5), // outclk0.clk  148.5MHz
     .locked   (vpg_pll_locked)    //  locked.export
 );
-assign vpg_locked = vpg_pll_locked;
+
 
 vga_time_generator vga_time_generator_inst(
 
    .clk(clk_148_5),
-   .reset_n(vpg_pll_locked),
-   .timing_change(mode_change),
+   .reset_n(~vpg_pll_locked),
+   .timing_change(timing_change),
 
    .h_disp( h_disp),
    .h_fporch(h_fporch),
@@ -150,16 +155,16 @@ vga_time_generator vga_time_generator_inst(
 
 //===== pattern generator according to vga timing
 
-wire  gen_hs/*synthesis keep*/;
-wire  gen_vs/*synthesis keep*/;
-wire  gen_de/*synthesis keep*/;
-wire [7:0]    gen_r/*synthesis keep*/;
-wire [7:0]    gen_g/*synthesis keep*/;
-wire [7:0]    gen_b/*synthesis keep*/;
+wire  gen_hs;
+wire  gen_vs;
+wire  gen_de;
+wire [7:0]    gen_r;
+wire [7:0]    gen_g;
+wire [7:0]    gen_b;
 
 //convert time: 1-clock
 pattern_gen pattern_gen_inst(
-    .reset_n(vpg_pll_locked & ~mode_change),
+    .reset_n(~vpg_pll_locked),
     .pixel_clk(clk_148_5),
     .pixel_de(time_de),
     .pixel_hs(time_hs),
@@ -186,6 +191,7 @@ assign vpg_vs     = gen_vs;
 assign vpg_r     = gen_r;
 assign vpg_g     = gen_g;
 assign vpg_b     = gen_b;
+
 
 endmodule
 

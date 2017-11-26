@@ -31,7 +31,7 @@
 // --------------------------------------------------------------------
 #include "terasic_includes.h"
 #include "I2C.h"
-
+#define DEBUG_I2C
 // Note. Remember to reset device befroe acceess I2C interface
 #ifdef DEBUG_I2C
     #define I2C_DEBUG(x)    DEBUG(x)  
@@ -73,18 +73,22 @@ bool I2C_Write(alt_u32 clk_base, alt_u32 data_base, alt_8 DeviceAddr, alt_u8 Con
     //DeviceAddr = HMB_E2_I2C_ID;
 
     i2c_start(clk_base, data_base);
-    DeviceAddr = DeviceAddr << 1;
+    //DeviceAddr = DeviceAddr << 1; // Chunjie
+
     if (!i2c_write(clk_base, data_base, DeviceAddr)){  // send ID
         bSuccess = FALSE;
         I2C_DEBUG(("I2C Fail: Address NACK!\n"));
+        printf("IIC_Write:I2C Fail: Address NACK!\n");//Chunjie
     }
     if (bSuccess && !i2c_write(clk_base, data_base, ControlAddr)){ // send sub-address
         bSuccess = FALSE;
         I2C_DEBUG(("I2C Fail: SubAddress NACK!\n"));
+        printf("IIC_Write:I2C Fail: SubAddress NACK!\n");//Chunjie
     }            
     if (bSuccess && !i2c_write(clk_base, data_base, ControlData)){  
         bSuccess = FALSE;
         I2C_DEBUG(("I2C Fail: write NACK!\n"));
+        printf("IIC_Write:I2C Fail: write NACK!\n");//Chunjie
     }
     i2c_stop(clk_base, data_base);
     
@@ -105,12 +109,13 @@ bool I2C_Read(alt_u32 clk_base, alt_u32 data_base, alt_8 DeviceAddr, alt_u8 Cont
    // alt_8 wr_data = (DeviceAddr << 1);
     if (!i2c_write(clk_base, data_base, DeviceAddr)){  // send ID
         bSuccess = FALSE;
-        printf("Fail to NACK\n");
+        printf("IIC_Read:I2C Fail: Address NACK!\n");//Chunjie
         I2C_DEBUG(("I2C Fail: Address NACK!\n"));
     }
     if (bSuccess && !i2c_write(clk_base, data_base, ControlAddr)){ // send sub-address
         bSuccess = FALSE;
         I2C_DEBUG(("I2C Fail: SubAddress NACK!\n"));
+        printf("IIC_Read:I2C Fail: SubAddress NACK!\n");//Chunjie
     }            
     i2c_start(clk_base, data_base);  // restart
    DeviceAddr |= 1; // Read
@@ -118,6 +123,7 @@ bool I2C_Read(alt_u32 clk_base, alt_u32 data_base, alt_8 DeviceAddr, alt_u8 Cont
     if (bSuccess && !i2c_write(clk_base, data_base, DeviceAddr)){  // send id
         bSuccess = FALSE;
         I2C_DEBUG(("I2C Fail: Address+1 NACK!\n"));
+        printf("IIC_Read:I2C Fail:  Address+1 NACK!\n");//Chunjie
     }
     
     if (bSuccess){

@@ -163,7 +163,7 @@ HDMITX_WriteI2C_ByteN(BYTE RegAddr,BYTE *pData,int N)
     BOOL bSuccess = TRUE;
     int i;
     for(i=0;i<N && bSuccess;i++){
-        bSuccess = I2C_Write(HDMI_TX_I2C_CLOCK, HDMI_TX_I2C_DATA, HDMI_TX_I2C_SLAVE_ADDR, RegAddr+i, *(pData+i));
+        bSuccess = I2C_Write(HDMI_TX_I2C_CLOCK, HDMI_TX_I2C_DATA, HDMI_TX_I2C_SLAVE_ADDR, RegAddr+i, (alt_u8 *)*(pData+i)); // Chunjie Add alt_u8*
     }        
     return bSuccess?ER_SUCCESS:ER_FAIL;       
 }

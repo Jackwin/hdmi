@@ -17,7 +17,8 @@ obj/default/main.o: main.c terasic_lib/terasic_includes.h \
  ../test7_bsp//drivers/inc/altera_avalon_timer.h \
  ../test7_bsp//HAL/inc/sys/alt_dev.h \
  ../test7_bsp//HAL/inc/sys/alt_warning.h \
- ../test7_bsp//HAL/inc/sys/alt_stdio.h terasic_lib/debug.h HDMI_lib/mcu.h \
+ ../test7_bsp//HAL/inc/sys/alt_stdio.h terasic_lib/debug.h \
+ terasic_lib/I2C.h terasic_lib/terasic_includes.h HDMI_lib/mcu.h \
  HDMI_lib/../terasic_lib/terasic_includes.h HDMI_lib/HDMI_TX/HDMI_TX.h \
  HDMI_lib/HDMI_TX/../HDMI_COMMON.h
 
@@ -70,6 +71,10 @@ terasic_lib/terasic_includes.h:
 ../test7_bsp//HAL/inc/sys/alt_stdio.h:
 
 terasic_lib/debug.h:
+
+terasic_lib/I2C.h:
+
+terasic_lib/terasic_includes.h:
 
 HDMI_lib/mcu.h:
 

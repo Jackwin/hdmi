@@ -269,7 +269,9 @@ static BYTE InitIT6613_HDCPROM()
     HDMITX_WriteI2C_Byte(0xF8,0xC3) ;	//password
     HDMITX_WriteI2C_Byte(0xF8,0xA5) ;	// password
     HDMITX_WriteI2C_Byte(REG_TX_LISTCTRL,0x60) ; // Richard, ????
-    I2C_Read_ByteN(0xE0,0x00,uc,5) ;  // richard note. internal rom is used
+    // Change by Chunjie
+    //I2C_Read_ByteN(0xE0,0x00,uc,5) ;  // richard note. internal rom is used
+    HDMITX_ReadI2C_ByteN(0xE0,uc,5); // Chunjie
     
     if(uc[0] == 1 &&
         uc[1] == 1 &&
@@ -296,14 +298,13 @@ static BYTE InitIT6613_HDCPROM()
 void InitIT6613()
 {
 	// config interrupt
-    HDMITX_WriteI2C_Byte(REG_TX_INT_CTRL,Instance[0].bIntType) ;
+    bool state = HDMITX_WriteI2C_Byte(REG_TX_INT_CTRL,Instance[0].bIntType) ;
     Instance[0].bIntPOL = (Instance[0].bIntType&B_INTPOL_ACTH)?TRUE:FALSE ;
-
 	// Reset 
-    HDMITX_WriteI2C_Byte(REG_TX_SW_RST,B_REF_RST|B_VID_RST|B_AUD_RST|B_AREF_RST|B_HDCP_RST) ;
+    state = HDMITX_WriteI2C_Byte(REG_TX_SW_RST,B_REF_RST|B_VID_RST|B_AUD_RST|B_AREF_RST|B_HDCP_RST) ;
     DelayMS(1) ;
-    HDMITX_WriteI2C_Byte(REG_TX_SW_RST,B_VID_RST|B_AUD_RST|B_AREF_RST|B_HDCP_RST) ;
-    
+    state = HDMITX_WriteI2C_Byte(REG_TX_SW_RST,B_VID_RST|B_AUD_RST|B_AREF_RST|B_HDCP_RST) ;
+
 #if 0    
     // Enable clock ring (richard add according toe programming guide)
     HDMITX_WriteI2C_Byte(REG_TX_AFE_DRV_CTRL, 0x10);
@@ -315,10 +316,9 @@ void InitIT6613()
 
     // Avoid power loading in un play status.
     HDMITX_WriteI2C_Byte(REG_TX_AFE_DRV_CTRL,B_AFE_DRV_RST|B_AFE_DRV_PWD) ;
-
     // set interrupt mask,mask value 0 is interrupt available.
 // richard    HDMITX_WriteI2C_Byte(REG_TX_INT_MASK1,0xB2) ;  // enable interrupt: HPD, DDCBusHangMask, 
-    HDMITX_WriteI2C_Byte(REG_TX_INT_MASK1,0xB2) ;  // enable interrupt: HPD, DDCBusHangMask, 
+    HDMITX_WriteI2C_Byte(REG_TX_INT_MASK1,0xB2) ;  // enable interrupt: HPD, DDCBusHangMask,
     HDMITX_WriteI2C_Byte(REG_TX_INT_MASK2,0xF8) ;  // enable interrupt: AuthFailMask, AUthDoneMask, KSVListChkMask
     HDMITX_WriteI2C_Byte(REG_TX_INT_MASK3,0x37) ; //  enable interrupt: PktAudMask, PktDBDMask, PkMpgMask, AUdCTSMask, HDCPSynDetMask
 
@@ -2026,7 +2026,11 @@ ReadEDID(BYTE *pData,BYTE bSegment,BYTE offset,SHORT Count)
         ErrorF("ReadEDID(): ReqCount = %d,bCurrOffset = %d\n",ReqCount,bCurrOffset) ;
 
         HDMITX_WriteI2C_Byte(REG_TX_DDC_MASTER_CTRL,B_MASTERDDC|B_MASTERHOST) ;
+        ucdata = HDMITX_ReadI2C_Byte(REG_TX_DDC_MASTER_CTRL);
         HDMITX_WriteI2C_Byte(REG_TX_DDC_CMD,CMD_FIFO_CLR) ;
+        // Chunjie
+        ucdata = HDMITX_ReadI2C_Byte(REG_TX_DDC_MASTER_CTRL);
+        ucdata = HDMITX_ReadI2C_Byte(REG_TX_DDC_CMD);
 
         for(TimeOut = 0 ; TimeOut < 200 ; TimeOut++)
     	{
@@ -2051,7 +2055,16 @@ ReadEDID(BYTE *pData,BYTE bSegment,BYTE offset,SHORT Count)
         HDMITX_WriteI2C_Byte(REG_TX_DDC_REQCOUNT,(BYTE)ReqCount) ;
         HDMITX_WriteI2C_Byte(REG_TX_DDC_EDIDSEG,bSegment) ;
         HDMITX_WriteI2C_Byte(REG_TX_DDC_CMD,CMD_EDID_READ) ;
+        //Chunjie
+        /*
+        ucdata = HDMITX_ReadI2C_Byte(REG_TX_DDC_MASTER_CTRL);
+        ucdata = HDMITX_ReadI2C_Byte(REG_TX_DDC_HEADER);
+        ucdata = HDMITX_ReadI2C_Byte(REG_TX_DDC_REQOFF);
+        ucdata = HDMITX_ReadI2C_Byte(REG_TX_DDC_REQCOUNT);
+        ucdata = HDMITX_ReadI2C_Byte(REG_TX_DDC_EDIDSEG);
+        ucdata = HDMITX_ReadI2C_Byte(REG_TX_DDC_CMD);
 
+*/
         bCurrOffset += ReqCount ;
         RemainedCount -= ReqCount ;
 

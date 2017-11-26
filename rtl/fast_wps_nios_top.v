@@ -12,7 +12,7 @@ module fast_wps_nios_top (
 
     //HDMI programming ports
     output          hdmi_tx_rst_n,
-    output          hdmi_int_n,
+    input          hdmi_int_n,
     //inout           pio_iic_sda,
     //output          pio_iic_scl,
     inout           hdmi_pcsda,
@@ -28,16 +28,20 @@ module fast_wps_nios_top (
 
 );
 
-wire            clk_100m;
+wire            clk_100m/*synthesis keep*/;
+wire 			    clk_50m/*synthesis keep*/;
 wire            pll_locked;
 reg [26:0]      counter;
 
-wire            vpg_disp_mode_change;
-wire [3:0]      vpg_disp_mode;
-wire [1:0]      vpg_disp_color;
+wire            vpg_disp_mode_change/*synthesis keep*/;
+wire [3:0]      vpg_disp_mode/*synthesis keep*/;
+wire [1:0]      vpg_disp_color/*synthesis keep*/;
+wire            time_gen;
+wire            vpg_locked;
 
 assign pll_led = ~pll_locked;
 //------------------------NIOS CPU -----------------------------
+
 nios nios_i (
     .clk_clk(clk50m_in),
     .reset_reset_n(reset_n),
@@ -57,11 +61,12 @@ pll_50m pll_50m_i (
     .refclk   (clk50m_in),   //  refclk.clk
     .rst      (~reset_n),      //   reset.reset
     .outclk_0 (clk_100m), // outclk0.clk
+	 .outclk_1 (clk_50m),
     .locked   (pll_locked)    //  locked.export
 );
 
 //--------------------- Shrink LED ------------------------
-always @(posedge clk_100m or negedge reset_n) begin : proc_led
+always @(posedge clk_50m or negedge reset_n) begin : proc_led
     if (~reset_n) begin
         counter <= 'h0;
     end else begin
@@ -75,20 +80,21 @@ assign shrink_led = counter[26];
 
 
 wire                    vpg_pclk;
-wire                    vpg_de;
-wire                    vpg_hs;
-wire                    vpg_vs;
-wire        [7:0]       vpg_r;
-wire        [7:0]       vpg_g;
-wire        [7:0]       vpg_b;
+wire                    vpg_de/*synthesis keep*/;
+wire                    vpg_hs/*synthesis keep*/;
+wire                    vpg_vs/*synthesis keep*/;
+wire        [7:0]       vpg_r/*synthesis keep*/;
+wire        [7:0]       vpg_g/*synthesis keep*/;
+wire        [7:0]       vpg_b/*synthesis keep*/;
 
 
 vpg vpg_inst(
                     .clk_100m    (clk_100m),
-                    .reset_n    (reset_n),
+                    .reset_n    (pll_locked),
                     .mode       (vpg_disp_mode),
                     .mode_change(vpg_disp_mode_change),
                     .disp_color (vpg_disp_color),
+                    .vpg_locked (vpg_locked),
                     .vpg_pclk   (vpg_pclk),
                     .vpg_de     (vpg_de),
                     .vpg_hs     (vpg_hs),
@@ -107,5 +113,13 @@ source_selector source_selector_inst(
                                                  .sel   (1'b0),
                                                  .result({hdmi_tx_de, hdmi_tx_hs,hdmi_tx_vs,hdmi_tx_rd,hdmi_tx_gd,hdmi_tx_bd})
                                                 );
+
+// ---------------------- Debug ----------------------
+
+source_probe source_probe_i (
+    .source (time_gen), // sources.source
+	 .source_clk(clk_100m),
+    .probe  (vpg_locked)   //  probes.probe
+    );
 
 endmodule
