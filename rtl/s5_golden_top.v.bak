@@ -208,7 +208,17 @@ wire                hdmi_tx_pclk;
 wire                hdmi_tx_int_n;
 
 // --------------- ADC signals declaration -----------------
-
+wire                sys_clk;
+wire                adc_dco;
+wire [13:0]         adc_data;
+wire                adc_oe_n;
+wire                adc_or_in;
+wire                or_led;
+wire                adc_sclk;
+wire                adc_sdio;
+wire                adc_cs_n;
+wire                fpga_adc_clk_p;
+wire                fpga_adc_clk_n;
 
 assign user_led_r[0] = shrink_led;
 assign user_led_r[1] = pll_led;

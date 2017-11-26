@@ -19,7 +19,7 @@ module fast_wps_nios_top (
     output          or_led,
     output          adc_sclk,
     output          adc_sdio,
-    output          adc_cs_n,
+    output          adc_cs_n
     //HDMI programming ports
     output          hdmi_tx_rst_n,
     input           hdmi_int_n,
@@ -58,6 +58,15 @@ wire [7:0]      vpg_g/*synthesis keep*/;
 wire [7:0]      vpg_b/*synthesis keep*/;
 
 // ----------------- ADC --------------------------------------
+wire           sys_clk;
+wire           adc_dco;
+wire [13:0]    adc_data;
+wire           adc_oe_n;
+wire           adc_or_in;
+wire           or_led;
+wire           adc_sclk;
+wire           adc_sdio;
+wire           adc_cs_n;
 
 assign pll_led = ~pll_locked;
 //------------------------NIOS CPU -----------------------------
