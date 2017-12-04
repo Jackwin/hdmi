@@ -1,26 +1,28 @@
 module dac (
-    input       ref_clk,
+    input       ref_clk,  // clk is 10 MHz
     input       reset_n,
-    output [13:0] dac_data/*synthesis keep*/
+
+    output [13:0] dac_data
 
 );
 
-reg [13:0] sin_mem [0:38];
-reg [6:0] cnt;
+reg [13:0] sin_mem [0:19];
+reg [4:0] cnt;
 initial begin
     $readmemh("sin.dat",sin_mem);
 end
 
 always @(posedge ref_clk) begin
     if (~reset_n) begin
-        cnt <= 'h0;
+        dac_data <= 0;
+        cnt <= 0;
     end
     else begin
-        if (cnt == 6'd38) begin
-            cnt <= 'h0;
+        if (cnt == 4'd19) begin
+            cnt <= 0;
         end
         else begin
-            cnt <= cnt + 1'd1;
+            cnt <= cnt + 1;
         end
     end
 end

@@ -178,14 +178,15 @@ module s5_golden_top
 `endif
 
 //HSMC-Port-B--------------------------//107pins //--------------------------
+
+    output [13:0]       dac_data,
+
     input               adc_dco,
     input [13:0]        adc_data,
     output              adc_oe_n,
     input               adc_or_in,
-
-    output              fpga_adc_clk_p,
-    output              fpga_adc_clk_n,
-    output              or_led,
+    output              adc_clk_p,
+    //output              adc_clk_n,
     output              adc_sclk,
     output              adc_sdio,
     output              adc_cs_n
@@ -208,7 +209,7 @@ wire                hdmi_tx_pclk;
 wire                hdmi_tx_int_n;
 
 // --------------- ADC signals declaration -----------------
-
+wire                or_led;
 
 assign user_led_r[0] = shrink_led;
 assign user_led_r[1] = pll_led;
@@ -266,8 +267,13 @@ assign hsma_rx_n[0] = hdmi_tx_rst_n;
 assign hsma_rx_p[1] = hdmi_tx_int_n;
 // ----------------- ADC interface assignment ----------------
 
-
-
+/*
+iobuf iobuf (
+    .datain(fpga_adc_clk_p),
+    .dataout(adc_clk_p),
+    );
+*/
+assign adc_clk_p = fpga_adc_clk_p;
 fast_wps_nios_top fast_wps_nios_top_i (
    .clk50m_in(clkin_50),
    .reset_n(cpu_resetn),
@@ -284,10 +290,12 @@ fast_wps_nios_top fast_wps_nios_top_i (
     .adc_oe_n      (adc_oe_n),
     .adc_or_in     (adc_or_in),
     .fpga_adc_clk_p(fpga_adc_clk_p),
-    .fpga_adc_clk_n(fpga_adc_clk_n),
+    //.fpga_adc_clk_n(fpga_adc_clk_n),
     .or_led        (or_led),
     .adc_sclk      (adc_sclk),
     .adc_sdio      (adc_sdio),
+    .adc_cs_n      (adc_cs_n),
+    .dac_data      (dac_data),
 
     .hdmi_tx_rst_n(hdmi_tx_rst_n),
     .hdmi_int_n(hdmi_tx_int_n),

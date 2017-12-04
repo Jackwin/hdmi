@@ -8,6 +8,8 @@ module fast_wps_nios_top (
 
     output          iic_sda,
     inout           iic_scl,
+// ---------- DAC --------------------------
+    output [13:0]   dac_data,
 // ---------- ADC --------------------------
     input           adc_dco,
     input [13:0]    adc_data,
@@ -15,7 +17,7 @@ module fast_wps_nios_top (
     input           adc_or_in,
 
     output          fpga_adc_clk_p,
-    output          fpga_adc_clk_n,
+//    output          fpga_adc_clk_n,
     output          or_led,
     output          adc_sclk,
     output          adc_sdio,
@@ -90,7 +92,7 @@ pll_50m pll_50m_i (
 // -------------------- ADC -------------------------------
 
 assign fpga_adc_clk_p = clk_100m_p;
-assign fpga_adc_clk_n = clk_100m_n;
+//assign fpga_adc_clk_n = clk_100m_n;
 adc adc_i (
     .reset_n  (reset_n),
     .sys_clk  (clk_100m),
@@ -103,6 +105,12 @@ adc adc_i (
     .adc_sdio (adc_sdio),
     .adc_cs_n (adc_cs_n)
   );
+dac dac_i (
+    .ref_clk  (clk_100m_p),
+    .reset_n  (reset_n),
+    .dac_data(dac_data),
+    );
+
 //--------------------- Shrink LED ------------------------
 always @(posedge clk_50m or negedge reset_n) begin : proc_led
     if (~reset_n) begin

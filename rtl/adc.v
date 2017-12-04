@@ -19,8 +19,8 @@ module adc (
 );
 
 // Signals
-reg [13:0]          adc_data_r1, adc_data_r2;
-reg [13:0]          adc_usr;
+reg [13:0]          adc_data_r1, adc_data_r2/*synthesis keep*/;
+reg [13:0]          adc_usr/*synthesis keep*/;
 assign adc_sclk = 1'b0; // Data format is Binary
 assign adc_sdio = 1'b1; // Enable DCS
 assign adc_cs_n = 1'b1;
