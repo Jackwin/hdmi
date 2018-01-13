@@ -70,10 +70,10 @@ module s5_golden_top
     output               ddr3_clk_p,        //SSTL15  //Diff Clock - Pos
     output               ddr3_cke,         //SSTL15  //Clock Enable
     output               ddr3_csn,         //SSTL15  //Chip Select
-    output  [8:0]        ddr3_dm,          //SSTL15  //Data Write Mask
-    inout   [71:0]       ddr3_dq,          //SSTL15  //Data Bus
-    inout   [8:0]        ddr3_dqs_n,       //SSTL15  //Diff Data Strobe - Neg
-    inout   [8:0]        ddr3_dqs_p,       //SSTL15  //Diff Data Strobe - Pos
+    output  [7:0]        ddr3_dm,          //SSTL15  //Data Write Mask
+    inout   [63:0]       ddr3_dq,          //SSTL15  //Data Bus
+    inout   [7:0]        ddr3_dqs_n,       //SSTL15  //Diff Data Strobe - Neg
+    inout   [7:0]        ddr3_dqs_p,       //SSTL15  //Diff Data Strobe - Pos
     output               ddr3_odt,         //SSTL15  //On-Die Termination Enable
     output               ddr3_rasn,        //SSTL15  //Row Address Strobe
     output               ddr3_resetn,        //SSTL15  //Reset
@@ -121,9 +121,9 @@ module s5_golden_top
 
 `ifdef pcie
 //PCI-Express--------------------------//25 pins //--------------------------
-    //input  [7:0] pcie_rx_p,           //PCML14  //PCIe Receive Data-req's OCT
-    //output [7:0] pcie_tx_p,           //PCML14  //PCIe Transmit Data
-    //input        pcie_refclk_p,       //HCSL    //PCIe Clock- Terminate on MB
+    input  [7:0] pcie_rx_p,           //PCML14  //PCIe Receive Data-req's OCT
+    output [7:0] pcie_tx_p,           //PCML14  //PCIe Transmit Data
+    input        pcie_refclk_p,       //HCSL    //PCIe Clock- Terminate on MB
     output              pcie_led_g3,         //2.5V    //User LED - Labeled Gen3
     output              pcie_led_g2,         //2.5V    //User LED - Labeled Gen2
     output              pcie_led_x1,         //2.5V    //User LED - Labeled x1
@@ -213,10 +213,11 @@ wire                or_led;
 
 assign user_led_r[0] = shrink_led;
 assign user_led_r[1] = pll_led;
-assign user_led_r[2] = iic_sda;
-assign user_led_r[3] = iic_scl;
-assign user_led_r[4] = or_led;
-assign user_led_r[7:5] = 3'b111;
+assign user_led_r[2] = or_led;
+//assign user_led_r[2] = iic_sda;
+//assign user_led_r[3] = iic_scl;
+
+//assign user_led_r[7:5] = 3'b111;
 
 //-------------- HDMI interface assignment -------------------
 assign hsma_rx_p[7] = hdmi_tx_pclk;
@@ -311,6 +312,65 @@ fast_wps_nios_top fast_wps_nios_top_i (
 
    );
 
+// PCI-e signals
+wire L0_led, alive_led, comp_led, gen2_led, gen3_led;
+wire [3:0] lane_active_led;
+wire reconfig_xcvr_clk, pll_ref_clk, oct_rzqin;
+wire local_rstn;
+
+assign reconfig_xcvr_clk = clkinbot_p[0];
+assign local_rstn = user_pb[0];
+
+//assign user_led_g[7] = lane_active_led[3];
+//assign user_led_g[6] = lane_active_led[2];
+//assign user_led_g[5] = lane_active_led[1];
+//assign user_led_g[4] = lane_active_led[0];
+
+assign user_led_r[3] = gen2_led;
+assign user_led_r[4] = gen3_led;
+assign user_led_r[5] = comp_led;
+assign user_led_r[6] = alive_led;
+assign user_led_r[7] = L0_led;
+
+
+assign pll_ref_clk = clkintop_p[0];
+assign oct_rzqin = rzqin_1p5;
+
+pcie_dma_gen3x8 pcie_dma_gen3x8_i (
+   .pcie_rx          (pcie_rx_p),
+   .pcie_tx          (pcie_tx_p),
+   .refclk_clk       (pcie_refclk_p),
+   .reconfig_xcvr_clk(reconfig_xcvr_clk),
+   .local_rstn       (local_rstn),
+
+   //.pld_clk_clk      (pld_clk_clk),
+   .lane_active_led  (lane_active_led),
+   .L0_led           (L0_led),
+   .alive_led        (alive_led),
+   .comp_led         (comp_led),
+   .gen2_led         (gen2_led),
+   .gen3_led         (gen3_led),
+   .perstn           (pcie_perstn),
+
+   .pll_ref_clk      (pll_ref_clk),
+   .mem_a            (ddr3_a),
+   .mem_ba           (ddr3_ba),
+   .mem_ck           (ddr3_clk_p),
+   .mem_ck_n         (ddr3_clk_n),
+   .mem_cke          (ddr3_cke),
+   .mem_cs_n         (ddr3_csn),
+   .mem_dm           (ddr3_dm[7:0]),
+   .mem_ras_n        (ddr3_rasn),
+   .mem_cas_n        (ddr3_casn),
+   .mem_we_n         (ddr3_wen),
+   .mem_reset_n      (ddr3_resetn),
+   .mem_dq           (ddr3_dq[63:0]),
+   .mem_dqs          (ddr3_dqs_p[7:0]),
+   .mem_dqs_n        (ddr3_dqs_n[7:0]),
+   .mem_odt          (ddr3_odt),
+   .oct_rzqin        (oct_rzqin),
+   .cpu_resetn       (cpu_resetn)
+   );
 
 
 
