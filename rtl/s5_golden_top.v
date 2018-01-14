@@ -197,6 +197,7 @@ wire                pll_led;
 wire                pi_iic_scl;
 wire                pi_iic_sda;
 wire                iic_scl, iic_sda;
+
 // -------------- HDMI signals declaration -----------------
 wire                hdmi_tx_rst_n;
 wire [11:0]         hdmi_tx_rd;
@@ -276,12 +277,14 @@ iobuf iobuf (
 */
 assign adc_clk_p = fpga_adc_clk_p;
 fast_wps_nios_top fast_wps_nios_top_i (
-   .clk50m_in(clkin_50),
-   .reset_n(cpu_resetn),
+    .clk50m_in      (clkin_50),
+    .reset_n        (cpu_resetn),
 
-   .led_o(user_led_g),
-   .shrink_led(shrink_led),
-   .pll_led(pll_led),
+    .led_o(user_led_g),
+    .shrink_led(shrink_led),
+    .pll_led(pll_led),
+    .clk_200m_out(ddr3_usr_clk),
+    .rst_n_out(ddr3_usr_rst_n),
 
     .iic_sda(iic_sda),
     .iic_scl(iic_scl),
@@ -318,21 +321,30 @@ wire [3:0] lane_active_led;
 wire reconfig_xcvr_clk, pll_ref_clk, oct_rzqin;
 wire local_rstn;
 
+wire                ddr3_usr_clk/*synthesis keep*/;
+wire                ddr3_usr_rst_n/*synthesis keep*/;
+
+localparam ADDR_WIDTH = 22;
+localparam LEN_WIDTH = 8;
+wire [ADDR_WIDTH-1:0]           ddr3_start_to_wr_addr_in;
+wire [LEN_WIDTH-1:0]            ddr3_bytes_to_wr_in;
+wire                            ddr3_wr_req_in;
+wire [31:0]                     ddr3_wr_data_in;
+wire                            ddr3_wr_valid_in;
+
+wire                            ddr3_rd_req_in;
+wire [ADDR_WIDTH-1:0]           ddr3_start_to_rd_addr_in;
+wire [LEN_WIDTH-1:0]            ddr3_bytes_to_rd_in;
+wire                            ddr3_rddata_valid_out/*synthesis keep*/;
+wire [31:0]                     ddr3_rddata_out/*synthesis keep*/;
+
 assign reconfig_xcvr_clk = clkinbot_p[0];
 assign local_rstn = user_pb[0];
-
-//assign user_led_g[7] = lane_active_led[3];
-//assign user_led_g[6] = lane_active_led[2];
-//assign user_led_g[5] = lane_active_led[1];
-//assign user_led_g[4] = lane_active_led[0];
-
 assign user_led_r[3] = gen2_led;
 assign user_led_r[4] = gen3_led;
 assign user_led_r[5] = comp_led;
 assign user_led_r[6] = alive_led;
 assign user_led_r[7] = L0_led;
-
-
 assign pll_ref_clk = clkintop_p[0];
 assign oct_rzqin = rzqin_1p5;
 
@@ -369,10 +381,144 @@ pcie_dma_gen3x8 pcie_dma_gen3x8_i (
    .mem_dqs_n        (ddr3_dqs_n[7:0]),
    .mem_odt          (ddr3_odt),
    .oct_rzqin        (oct_rzqin),
-   .cpu_resetn       (cpu_resetn)
+   .cpu_resetn       (cpu_resetn),
+
+   .ddr3_usr_clk            (ddr3_usr_clk),
+   .ddr3_usr_rst_n          (ddr3_usr_rst_n),
+   .ddr3_start_to_wr_addr_in(ddr3_start_to_wr_addr_in),
+   .ddr3_bytes_to_write_in  (ddr3_bytes_to_wr_in),
+   .ddr3_wr_req_in          (ddr3_wr_req_in),
+   .ddr3_wr_data_in         (ddr3_wr_data_in),
+   .ddr3_wr_valid_in        (ddr3_wr_valid_in),
+
+   .ddr3_rd_req_in          (ddr3_rd_req_in),
+   .ddr3_start_to_rd_addr_in(ddr3_start_to_rd_addr_in),
+   .ddr3_bytes_to_rd_in     (ddr3_bytes_to_rd_in),
+   .ddr3_rddata_valid_out   (ddr3_rddata_valid_out),
+   .ddr3_rddata_out         (ddr3_rddata_out)
    );
 
 
+// Generate data for DDR testing
 
+// DDR write
+reg [31:0]  data_gen;
+reg         data_gen_valid;
+reg         data_gen_ena, data_gen_ena_r;
+reg [ADDR_WIDTH-1:0]  start_wr_addr;
+reg [LEN_WIDTH-1:0] bytes_to_write;
+wire [ADDR_WIDTH-1:0]  start_wr_addr_vio;
+wire [LEN_WIDTH-1:0] bytes_to_write_vio;
+wire                 data_gen_ena_vio;
+
+// DDR read
+wire [ADDR_WIDTH-1:0]  start_rd_addr_vio;
+wire [LEN_WIDTH-1:0] bytes_to_read_vio;
+wire                 data_read_req_vio;
+reg                  data_read_req, data_read_req_r;
+
+reg [1:0] state;
+localparam S0 = 2'h0, S1 = 2'h1, S2 = 2'h2;
+reg [7:0] bytes_cnt;
+
+// DDR write logics
+assign ddr3_wr_valid_in = data_gen_valid;
+assign ddr3_bytes_to_wr_in = bytes_to_write;
+assign ddr3_start_to_wr_addr_in = start_wr_addr;
+assign ddr3_wr_data_in = data_gen;
+always @(posedge ddr3_usr_clk or negedge ddr3_usr_rst_n) begin
+    if(~ddr3_usr_rst_n) begin
+         data_gen_ena_r <= 'h0;
+         data_gen_ena <= 'h0;
+    end else begin
+         data_gen_ena_r <= data_gen_ena_vio;
+         data_gen_ena <= ~data_gen_ena_r & data_gen_ena_vio;
+    end
+end
+
+always @(posedge ddr3_usr_clk or negedge ddr3_usr_rst_n) begin
+    if(~ddr3_usr_rst_n) begin
+         data_gen <= 'h0;
+         data_gen_valid <= 1'b0;
+         start_wr_addr <= 'h0;
+         bytes_to_write <= 'h0;
+         state <= S0;
+    end else begin
+        case(state)
+            S0: begin
+                data_gen <= 'h0;
+                data_gen_valid <= 1'b0;
+                start_wr_addr <= 'h0;
+                bytes_to_write <= 'h0;
+                bytes_cnt <= 'h0;
+                if (data_gen_ena) begin
+                    state <= S1;
+                end
+            end
+            S1: begin
+                data_gen_valid <= 1'b1;
+                start_wr_addr <= start_wr_addr_vio;
+                bytes_to_write <= bytes_to_write_vio;
+                data_gen <= 32'h00010203;
+                bytes_cnt <= bytes_cnt + 8'd4;
+                if (bytes_to_write_vio <= 8'd4) begin
+                    state <= S0;
+                end
+                else begin
+                    state <= S2;
+                end
+            end
+            S2: begin
+                if (bytes_cnt <= (bytes_to_write_vio - 8'd4)) begin
+                    state <= S0;
+                    data_gen_valid <= 1'b0;
+                end
+                else begin
+                    bytes_cnt <= bytes_cnt + 8'd4;
+                    data_gen <= data_gen + 32'h04040404;
+                    data_gen_valid <= 1'b1;
+                end
+            end
+            default: begin
+                state <= S0;
+                data_gen_valid <= 0;
+                data_gen <= 0;
+                start_wr_addr <= 0;
+                bytes_to_write <= 0;
+            end
+        endcase // state
+    end
+end
+
+source_probe ddr3_wr_source (
+    .source_clk (ddr3_usr_clk), // source_clk.clk
+    .source     ({start_wr_addr_vio, bytes_to_write_vio, data_gen_ena_vio,1'b0})      //    sources.source
+);
+
+// DDR read logics
+
+assign ddr3_rd_req_in = data_read_req;
+assign ddr3_start_to_rd_addr_in = start_rd_addr_vio;
+assign ddr3_bytes_to_rd_in = bytes_to_read_vio;
+
+always @(posedge ddr3_usr_clk or negedge ddr3_usr_rst_n) begin
+    if(~ddr3_usr_rst_n) begin
+         data_read_req <= 'h0;
+         data_read_req_r <= 'h0;
+    end else begin
+         data_read_req_r <= data_read_req_vio;
+         data_read_req <= ~data_read_req_r & data_read_req_vio;
+    end
+end
+
+source_probe ddr3_rd_source (
+    .source_clk (ddr3_usr_clk), // source_clk.clk
+    .source     ({start_rd_addr_vio, bytes_to_read_vio, data_read_req_vio,1'b0})      //    sources.source
+);
+
+source_probe ddr3_rddata_source (
+    .source_clk (ddr3_usr_clk), // source_clk.clk
+    .probe     ({ddr3_rddata_out, ddr3_rddata_valid_out})      //    sources.source
+);
 
 endmodule

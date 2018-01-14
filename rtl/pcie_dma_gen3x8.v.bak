@@ -1,9 +1,4 @@
-module pcie_dma_gen3x8 #(
-  parameter ADDR_WIDTH = 22,
-  parameter LEN_WIDTH = 8,
-  parameter DDR3_USR_DATA_WIDTH = 32
-  )
-  (
+module pcie_dma_gen3x8 (
 
     input wire [7:0]    pcie_rx,
     output wire [7:0]   pcie_tx,
@@ -53,7 +48,7 @@ module pcie_dma_gen3x8 #(
     input wire [ADDR_WIDTH-1:0]            ddr3_start_to_rd_addr_in,
     input wire [LEN_WIDTH-1:0]             ddr3_bytes_to_rd_in,
     output wire                            ddr3_rddata_valid_out,
-    output wire [DDR3_USR_DATA_WIDTH-1:0]  ddr3_rddata_out
+    output wire [DDR3_USR_DATA_WIDTH-1:0]  ddr3_rddata_out,
 );
 
 wire [52:0]         tl_cfg_tl_cfg_sts;
@@ -75,7 +70,8 @@ reg [2:0]           cbb_cnt;
 wire [WID-1:0]      cbb_btn=0;
 
 // DDR3 signals
-
+localparam ADDR_WIDTH = 22;
+localparam LEN_WIDTH = 8;
 wire                ddr_emif_clk;
 wire                ddr_emif_rst_n;
 wire                ddr_emif_ready;
@@ -93,7 +89,7 @@ wire                  usr_clk;
 wire                  usr_rst_n;
 wire [ADDR_WIDTH-1:0] start_to_wr_addr_in;
 wire [LEN_WIDTH-1:0]  bytes_to_write_in;
-wire                  wr_req_in;
+logic                 wr_req_in;
 wire [31:0]           wr_data_in;
 wire                  wr_valid_in;
 
@@ -263,12 +259,12 @@ pcie_de_ep_dma_g3x8_integrated u0 (
 
     );
 
-ddr3_emif_buffer emif_buffer_inst (
+emif_buffer emif_buffer_inst (
     .usr_clk              (ddr3_usr_clk),
     .usr_rst_n            (ddr3_usr_rst_n),
     .start_to_wr_addr_in  (ddr3_start_to_wr_addr_in),
     .bytes_to_write_in    (ddr3_bytes_to_write_in),
-    //.wr_req_in            (ddr3_wr_req_in),
+    .wr_req_in            (ddr3_wr_req_in),
     .wr_data_in           (ddr3_wr_data_in),
     .wr_valid_in          (ddr3_wr_valid_in),
 

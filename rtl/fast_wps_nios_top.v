@@ -5,6 +5,8 @@ module fast_wps_nios_top (
     output [7:0]    led_o,
     output          shrink_led,
     output          pll_led,
+    output          clk_200m_out,
+    output          rst_n_out,
 
     output          iic_sda,
     inout           iic_scl,
@@ -39,7 +41,7 @@ module fast_wps_nios_top (
 
 // ------------------- PLL signals ---------------------------
 wire            clk_100m/*synthesis keep*/;
-wire            clk_50m/*synthesis keep*/;
+wire            clk_200m/*synthesis keep*/;
 wire            clk_100m_p/*synthesis keep*/;
 wire            clk_100m_n/*synthesis keep*/;
 wire            pll_locked;
@@ -58,6 +60,8 @@ wire            vpg_vs/*synthesis keep*/;
 wire [7:0]      vpg_r/*synthesis keep*/;
 wire [7:0]      vpg_g/*synthesis keep*/;
 wire [7:0]      vpg_b/*synthesis keep*/;
+// ------------------- reset signals --------------------------
+reg             rst_n_meta, rst_n_sync;
 
 // ----------------- ADC --------------------------------------
 
@@ -83,11 +87,24 @@ pll_50m pll_50m_i (
     .refclk   (clk50m_in),   //  refclk.clk
     .rst      (~reset_n),      //   reset.reset
     .outclk_0 (clk_100m), // outclk0.clk
-    .outclk_1 (clk_50m),
+    .outclk_1 (clk_200m),
     .outclk_2 (clk_100m_p), // 100 Mhz phase shift 0
     .outclk_3 (clk_100m_n), // 100 MHz phase shift 180
     .locked   (pll_locked)    //  locked.export
 );
+assign clk_200m_out = clk_200m;
+assign rst_n_out = rst_n_sync;
+
+always @(posedge clk_200m or negedge pll_locked) begin
+    if (~pll_locked) begin
+        rst_n_meta <= 1'b0;
+        rst_n_sync <= 1'b0;
+    end
+    else begin
+        rst_n_sync <= rst_n_meta;
+        rst_n_meta <= 1'b1;
+    end
+end
 
 // -------------------- ADC -------------------------------
 
@@ -108,11 +125,11 @@ adc adc_i (
 dac dac_i (
     .ref_clk  (clk_100m_p),
     .reset_n  (reset_n),
-    .dac_data(dac_data),
+    .dac_data(dac_data)
     );
 
 //--------------------- Shrink LED ------------------------
-always @(posedge clk_50m or negedge reset_n) begin : proc_led
+always @(posedge clk_200m or negedge reset_n) begin : proc_led
     if (~reset_n) begin
         counter <= 'h0;
     end else begin
@@ -124,20 +141,20 @@ assign shrink_led = counter[26];
 //============== video pattern generator =====================
 
 vpg vpg_inst(
-                    .clk_100m    (clk_100m),
-                    .reset_n    (pll_locked),
-                    .mode       (vpg_disp_mode),
-                    .mode_change(vpg_disp_mode_change),
-                    .disp_color (vpg_disp_color),
-                    .vpg_locked (vpg_locked),
-                    .vpg_pclk   (vpg_pclk),
-                    .vpg_de     (vpg_de),
-                    .vpg_hs     (vpg_hs),
-                    .vpg_vs     (vpg_vs),
-                    .vpg_r      (vpg_r),
-                    .vpg_g      (vpg_g),
-                    .vpg_b      (vpg_b)
-                    );
+    .clk_100m    (clk_100m),
+    .reset_n    (pll_locked),
+    .mode       (vpg_disp_mode),
+    .mode_change(vpg_disp_mode_change),
+    .disp_color (vpg_disp_color),
+    .vpg_locked (vpg_locked),
+    .vpg_pclk   (vpg_pclk),
+    .vpg_de     (vpg_de),
+    .vpg_hs     (vpg_hs),
+    .vpg_vs     (vpg_vs),
+    .vpg_r      (vpg_r),
+    .vpg_g      (vpg_g),
+    .vpg_b      (vpg_b)
+    );
 
 //===== source selection, from pattern generator or hdmi-rx
 
@@ -150,11 +167,11 @@ source_selector source_selector_inst(
                                                 );
 
 // ---------------------- Debug ----------------------
-
+/*
 source_probe source_probe_i (
     .source (time_gen), // sources.source
 	 .source_clk(clk_100m),
     .probe  (vpg_locked)   //  probes.probe
     );
-
+*/
 endmodule
