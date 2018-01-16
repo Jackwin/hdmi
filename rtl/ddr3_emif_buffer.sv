@@ -4,8 +4,10 @@
 //                     -------------------------------------------------------------------------------
 //ddr_emif_addr[24:0] |sub_addr0|sub_addr1|sub_addr2|sub_addr3|sub_addr4|sub_addr5|sub_addr6|sub_addr7|
 
-//
-module emif_buffer # (
+// Implement the maping relationship between user logic data acess and the physical DDR
+// Support consective write
+// Support 256-bit read
+module ddr3_emif_buffer # (
     parameter       ADDR_WIDTH = 25,
     parameter       DDR3_USR_DATA_WIDTH = 32,
     parameter       LEN_WIDTH = 8,
@@ -42,7 +44,7 @@ module emif_buffer # (
 );
 
 localparam TIMES = DDR3_PHY_DATA_WIDTH/DDR3_USR_DATA_WIDTH;
-logic [ADDR_WIDTH-1:0]  start_wr_addr_r1,  start_wr_addr_r3;
+logic [ADDR_WIDTH-1:0]  start_wr_addr_r1;
 logic [LEN_WIDTH-1:0]   byte_length_r1, byte_length_r2;
 logic [LEN_WIDTH-1:0]   byte_counter;
 logic [DDR3_USR_DATA_WIDTH-1:0]  wr_data_r1, wr_data_r2, wr_data_r3, wr_data_r4;
@@ -119,7 +121,6 @@ always_comb begin : proc_state_update
     endcase // cs
 end
 
-
 always_ff @(posedge usr_clk) begin : proc_byte_counter
     if(~usr_rst_n) begin
          byte_counter <= 0;
@@ -133,42 +134,7 @@ always_ff @(posedge usr_clk) begin : proc_byte_counter
     end
 end
 
-/*
-always_comb begin : proc_wr_fifo
-    case(cs)
-        WR_IDLE: begin
-            fifo_wr_ena = 0;
-            fifo_wr_data = 0;
-        end
-        WR_ADDR: begin
-            fifo_wr_ena = 1;
-            fifo_wr_data = {start_wr_addr_r1, 1'b1}; // The last bit '1' represents WRITE
-        end
-        WR_LENGTH: begin
-            fifo_wr_ena = 1;
-            fifo_wr_data = {byte_length_r2, 1'b1};
-        end
-        WR_DATA: begin
-            fifo_wr_ena = 1;
-            fifo_wr_data = {wr_data_r3, 1'b1};
-        end
-        RD_ADDR: begin
-            fifo_wr_ena = 1;
-            fifo_wr_data = {start_rd_addr_r1, 1'b0};
-        end
-        RD_LENGTH: begin
-            fifo_wr_ena = 1;
-            fifo_wr_data = {usr_rd_len_r2, 1'b0};
-        end
-        default: begin
-            fifo_wr_ena = 0;
-            fifo_wr_data = 0;
-        end
-    endcase
-end
-*/
-
-always_ff @(posedge ddr_emif_clk) begin : proc_wr_fifo
+always_ff @(posedge usr_clk) begin : proc_wr_fifo
     case(cs)
         WR_IDLE: begin
             fifo_wr_ena <= 0;
@@ -200,9 +166,10 @@ always_ff @(posedge ddr_emif_clk) begin : proc_wr_fifo
         end
     endcase
 end
-//-----------------------------------------------------------------
+//--------------------------- User reads FIFO operation --------------------------------------
 logic [1:0]                     fifo_rd_cnt;
-logic [ADDR_WIDTH-1:0]          start_wr_addr_emif, ddr_emif_wr_addr;
+logic [ADDR_WIDTH-1:0]          start_wr_addr_emif;
+logic [21:0]                    ddr_emif_wr_addr;
 logic [LEN_WIDTH-1:0]           bytes_to_write_emif;
 logic                           emif_wr;
 logic [ADDR_WIDTH-1:0]          start_rd_addr_emif, ddr_emif_rd_addr;
@@ -214,7 +181,7 @@ logic [0:7][DDR3_USR_DATA_WIDTH-1:0]     data_emif_r;
 logic [DDR3_USR_DATA_WIDTH-1:0]          data_emif;
 logic [2:0]                     byte8_cnt;
 logic                           data_last, data_first, data_first_flag, data_body;
-logic [ADDR_WIDTH-1-3:0]        addr_emif;
+logic [ADDR_WIDTH-1-3:0]        addr_emif_inc;
 
 enum logic [2:0] {IDLE, ADDR, LENGTH, READ, DATA} emif_cs, emif_ns;
 
@@ -237,8 +204,8 @@ always_ff @(posedge ddr_emif_clk) begin : proc_fifo_rd_ctrl
                 IDLE: begin
                     fifo_rd_cnt <= fifo_rd_cnt + 1'd1;
                     if (fifo_rd_ena) emif_cs <= ADDR;
-                    emif_wr <= 0;
-                    rd_burst_remain <= 0;
+                        emif_wr <= 0;
+                        rd_burst_remain <= 0;
                 end
                 ADDR: begin
                     start_wr_addr_emif <= fifo_rd_data[0] ? fifo_rd_data[ADDR_WIDTH:1] : 0;
@@ -250,7 +217,6 @@ always_ff @(posedge ddr_emif_clk) begin : proc_fifo_rd_ctrl
                 LENGTH: begin
                     bytes_to_write_emif <= fifo_rd_data[0] ? fifo_rd_data[LEN_WIDTH:1] : 0;
                     bytes_to_read_emif <= (~fifo_rd_data[0]) ? fifo_rd_data[LEN_WIDTH:1] : 0;
-
                     if (fifo_rd_data[0]) begin
                         emif_cs <= DATA;
                     end
@@ -262,7 +228,7 @@ always_ff @(posedge ddr_emif_clk) begin : proc_fifo_rd_ctrl
 
                 DATA: begin
                     data_emif <= fifo_rd_data[DDR3_USR_DATA_WIDTH:1];
-                    if (bytes_to_write_emif ==1) begin
+                    if (bytes_to_write_emif == 1) begin
                         emif_cs <= IDLE;
                     end
                     else begin
@@ -277,7 +243,6 @@ always_ff @(posedge ddr_emif_clk) begin : proc_fifo_rd_ctrl
 end
 
 //------------------------- emif Read -------------------------
-logic [3:0] byte_enble_cnt_head, byte_enble_cnt_body, byte_enble_cnt_tail;
 logic [7:0] read_byte_enable_head, read_byte_enable_body, read_byte_enable_tail;
 
 always_ff @(posedge ddr_emif_clk) begin : proc_emif_rd
@@ -351,7 +316,7 @@ always_ff @(posedge usr_clk) begin : proc_rdfifo_rd
     end
 end
 
-fifo_256in_32out fifo_256inx32out_inst (
+fifo_256in_32out fifo_256in_32out_inst (
     .data    (rdfifo_wr_data),    //  fifo_input.datain
     .wrreq   (rdfifo_wr_ena),   //            .wrreq
     .rdreq   (rdfifo_rd_ena),   //            .rdreq
@@ -366,10 +331,10 @@ fifo_256in_32out fifo_256inx32out_inst (
 // ------------------------------ emif_addr MUX -------------------------
 always_comb begin : proc_emif_addr
     if(ddr_emif_write) begin
-        ddr_emif_addr = ddr_emif_wr_addr[ADDR_WIDTH-1:3];
+        ddr_emif_addr = ddr_emif_wr_addr;
     end
     else if (ddr_emif_read) begin
-        ddr_emif_addr = ddr_emif_rd_addr[ADDR_WIDTH-1:3];
+        ddr_emif_addr = ddr_emif_rd_addr;
     end
     else begin
         ddr_emif_addr = 0;
@@ -415,113 +380,101 @@ always_ff @(posedge ddr_emif_clk) begin : proc_byte8_cnt
 end
 
 always_ff @(posedge ddr_emif_clk) begin : proc_addr_emif
-    if(~ddr_emif_rst_n || emif_cs == IDLE) begin
-        addr_emif <= 0;
+    if(~ddr_emif_rst_n ||  data_last) begin
+        addr_emif_inc <= 0;
     end else begin
-        if (ddr_emif_write) begin
-            addr_emif <= addr_emif + 1'd1;
+        //if (ddr_emif_write || data_last) begin
+        if (data_body || data_first) begin
+            addr_emif_inc <= addr_emif_inc + 1'd1;
         end
     end
 end
 
-always_comb begin : proc_emif
-    ddr_emif_wr_addr = 0;
-    ddr_emif_write = 0;
-    ddr_emif_byte_enable = 0;
-    for (int i = 0; i < TIMES; i++) begin
-        ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] = data_emif_r[i];
+always_ff @(posedge ddr_emif_clk) begin : proc_emif
+    if (~ddr_emif_rst_n) begin
+        ddr_emif_wr_addr <= 0;
+        ddr_emif_write <= 0;
+        ddr_emif_byte_enable <= 0;
     end
-    if (data_first) begin
-        ddr_emif_wr_addr = start_wr_addr_emif[ADDR_WIDTH-1:3];
-        ddr_emif_write = 1;
-        case(start_wr_addr_emif[2:0])
-            /*
-            3'd0: ddr_emif_byte_enable = {8{8'hff}};
-            3'd1: ddr_emif_byte_enable = {{1{8'h00}},{7{8'hff}}};
-            3'd2: ddr_emif_byte_enable = {{2{8'h00}},{6{8'hff}}};
-            3'd3: ddr_emif_byte_enable = {{3{8'h00}},{5{8'hff}}};
-            3'd4: ddr_emif_byte_enable = {{4{8'h00}},{4{8'hff}}};
-            3'd5: ddr_emif_byte_enable = {{5{8'h00}},{3{8'hff}}};
-            3'd6: ddr_emif_byte_enable = {{6{8'h00}},{2{8'hff}}};
-            3'd7: ddr_emif_byte_enable = {{7{8'h00}},{1{8'hff}}};
-            */
-            3'd0: ddr_emif_byte_enable = {8{4'hf}};
-            3'd1: ddr_emif_byte_enable = {{1{4'h0}},{7{4'hf}}};
-            3'd2: ddr_emif_byte_enable = {{2{4'h0}},{6{4'hf}}};
-            3'd3: ddr_emif_byte_enable = {{3{4'h0}},{5{4'hf}}};
-            3'd4: ddr_emif_byte_enable = {{4{4'h0}},{4{4'hf}}};
-            3'd5: ddr_emif_byte_enable = {{5{4'h0}},{3{4'hf}}};
-            3'd6: ddr_emif_byte_enable = {{6{4'h0}},{2{4'hf}}};
-            3'd7: ddr_emif_byte_enable = {{7{4'h0}},{1{4'hf}}};
-        endcase // start_wr_addr_emif[2:0]
-    end
-    else if (data_body) begin
-        //ddr_emif_byte_enable = {8{8'hff}};
-        ddr_emif_byte_enable = {8{4'hf}};
-        ddr_emif_write = 1;
-        ddr_emif_wr_addr = start_wr_addr_emif[ADDR_WIDTH-1:3] + addr_emif;
-    end
-    else if (data_last) begin
-        ddr_emif_write = 1;
-        ddr_emif_wr_addr = start_wr_addr_emif[ADDR_WIDTH-1:3] + addr_emif;
+    else begin
+        ddr_emif_wr_addr <= 0;
+        ddr_emif_write <= 0;
+        ddr_emif_byte_enable <= 0;
+
+        for (int i = 0; i < TIMES; i++) begin
+            ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] <= data_emif_r[i];
+        end
+        if (data_first) begin
+            ddr_emif_wr_addr <= start_wr_addr_emif[ADDR_WIDTH-1:3];
+            ddr_emif_write <= 1;
+            case(start_wr_addr_emif[2:0])
+                3'd0: ddr_emif_byte_enable <= {8{4'hf}};
+                3'd1: ddr_emif_byte_enable <= {{1{4'h0}},{7{4'hf}}};
+                3'd2: ddr_emif_byte_enable <= {{2{4'h0}},{6{4'hf}}};
+                3'd3: ddr_emif_byte_enable <= {{3{4'h0}},{5{4'hf}}};
+                3'd4: ddr_emif_byte_enable <= {{4{4'h0}},{4{4'hf}}};
+                3'd5: ddr_emif_byte_enable <= {{5{4'h0}},{3{4'hf}}};
+                3'd6: ddr_emif_byte_enable <= {{6{4'h0}},{2{4'hf}}};
+                3'd7: ddr_emif_byte_enable <= {{7{4'h0}},{1{4'hf}}};
+            endcase // start_wr_addr_emif[2:0]
+        end
+        else if (data_body) begin
+            ddr_emif_byte_enable <= {8{4'hf}};
+            ddr_emif_write <= 1;
+            ddr_emif_wr_addr <= start_wr_addr_emif[ADDR_WIDTH-1:3] + addr_emif_inc;
+        end
+        else if (data_last) begin
+            ddr_emif_write <= 1;
+            ddr_emif_wr_addr <= start_wr_addr_emif[ADDR_WIDTH-1:3] + addr_emif_inc;
         // Big-Edian results in the data starts from the most-left side
-        case(byte8_cnt)
-            3'd0: begin
-                ddr_emif_byte_enable = 'h0;
-            end
-            3'd1: begin
-                //ddr_emif_byte_enable = {{1{8'hff}}, {7{8'h00}}};
-                ddr_emif_byte_enable = {{1{4'hf}}, {7{4'h0}}};
-                for (int i = 7; i >=7; i--) begin
-                     //ddr_emif_write_data[i*64+:64] = data_emif_r[i-7];
-                     ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] = data_emif_r[i-7];
+            case(byte8_cnt)
+                3'd0: begin
+                    ddr_emif_byte_enable <= 'h0;
                 end
-            end
-            3'd2: begin
-                //ddr_emif_byte_enable = {{2{8'hff}}, {6{8'h00}}};
-                ddr_emif_byte_enable = {{2{4'hf}}, {6{4'h0}}};
-                for (int i = 7; i >= 6; i--) begin
-                    //ddr_emif_write_data[i*64+:64] = data_emif_r[i-6];
-                    ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] = data_emif_r[i-6];
+                3'd1: begin
+                    ddr_emif_byte_enable <= {{1{4'hf}}, {7{4'h0}}};
+                    for (int i = 7; i >=7; i--) begin
+                         ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] <= data_emif_r[i-7];
+                    end
                 end
-            end
-            3'd3: begin
-                //ddr_emif_byte_enable = {{3{8'hff}}, {5{8'h00}}};
-                ddr_emif_byte_enable = {{3{4'hf}}, {5{4'h0}}};
-                for (int i = 7; i >= 5; i--) begin
-                    //ddr_emif_write_data[i*64+:64] = data_emif_r[i-5];
-                    ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] = data_emif_r[i-5];
+                3'd2: begin
+                    ddr_emif_byte_enable <= {{2{4'hf}}, {6{4'h0}}};
+                    for (int i = 7; i >= 6; i--) begin
+                        ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] <= data_emif_r[i-6];
+                    end
                 end
-            end
-            3'd4: begin
-                //ddr_emif_byte_enable = {{4{8'hff}}, {4{8'h00}}};
-                ddr_emif_byte_enable = {{4{4'hf}}, {4{4'h0}}};
-                for (int i = 7; i >= 4; i--) begin
-                    //ddr_emif_write_data[i*64+:64] = data_emif_r[i-4];
-                    ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] = data_emif_r[i-4];
+                3'd3: begin
+                    ddr_emif_byte_enable <= {{3{4'hf}}, {5{4'h0}}};
+                    for (int i = 7; i >= 5; i--) begin
+                        ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] <= data_emif_r[i-5];
+                    end
                 end
-            end
-            3'd5: begin
-                //ddr_emif_byte_enable = {{5{8'hff}}, {3{8'h00}}};
-                ddr_emif_byte_enable = {{5{4'hf}}, {3{4'h0}}};
-                for (int i = 7; i >= 3; i--) begin
-                    ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] = data_emif_r[i-3];
+                3'd4: begin
+                    ddr_emif_byte_enable <= {{4{4'hf}}, {4{4'h0}}};
+                    for (int i = 7; i >= 4; i--) begin
+                        ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] <= data_emif_r[i-4];
+                    end
                 end
-            end
-            3'd6: begin
-                ddr_emif_byte_enable = {{6{4'hf}}, {2{4'h0}}};
-                for (int i = 7; i >= 2; i--) begin
-                    ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] = data_emif_r[i-2];
+                3'd5: begin
+                    ddr_emif_byte_enable <= {{5{4'hf}}, {3{4'h0}}};
+                    for (int i = 7; i >= 3; i--) begin
+                        ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] <= data_emif_r[i-3];
+                    end
                 end
-            end
-            3'd7: begin
-                ddr_emif_byte_enable = {{7{4'hf}}};
-                for (int i = 7; i >= 1; i--) begin
-                    //ddr_emif_write_data[i*64+:64] = data_emif_r[i-1];
-                    ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] = data_emif_r[i-1];
+                3'd6: begin
+                    ddr_emif_byte_enable <= {{6{4'hf}}, {2{4'h0}}};
+                    for (int i = 7; i >= 2; i--) begin
+                        ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] <= data_emif_r[i-2];
+                    end
                 end
-            end
-        endcase // byte8_cnt
+                3'd7: begin
+                    ddr_emif_byte_enable <= {{7{4'hf}}, {1{4'h0}}};
+                    for (int i = 7; i >= 1; i--) begin
+                        ddr_emif_write_data[i*DDR3_USR_DATA_WIDTH+:DDR3_USR_DATA_WIDTH] <= data_emif_r[i-1];
+                    end
+                end
+            endcase // byte8_cnt
+        end
     end
 end
 
@@ -544,18 +497,16 @@ always_ff @(posedge ddr_emif_clk) begin
     end
 end
 
-
 always @(posedge ddr_emif_clk) begin
     if(ddr_emif_write) begin
-        $display("$time: write addr is %x, write_data is %x.\n", ddr_emif_addr, ddr_emif_write_data);
-        $display("$time: byte write enable is %x.\n", ddr_emif_byte_enable);
+        $display("$time: DDR3 write addr is %x, write_data is %x.\n", ddr_emif_addr, ddr_emif_write_data);
+        $display("$time: DDR3 byte write enable is %x.\n", ddr_emif_byte_enable);
     end
 
     if (ddr_emif_read) begin
-        $display("$time: read address is 0x%x, read burst is %d.\n", ddr_emif_rd_addr, ddr_emif_burst_count);
+        $display("$time: DDR3 read address is 0x%x, read burst is %d.\n", ddr_emif_rd_addr, ddr_emif_burst_count);
     end
 end
-
 
 dcfifo_33inx256 dcfifo_33inx256_inst (
     .wrclk(fifo_wr_clk),
@@ -568,30 +519,5 @@ dcfifo_33inx256 dcfifo_33inx256_inst (
     .rdempty(fifo_empty),
     .q(fifo_rd_data)
 );
-
-
-/*
-            if (bytes_to_read_emif <= (4'd8 - start_rd_addr_emif[2:0])) begin
-                ddr_emif_burst_count <= 1;
-                byte_enble_cnt_head <= (4'd8 - start_rd_addr_emif[2:0]);
-                byte_enble_cnt_body <= 0;
-                byte_enble_cnt_tail <= 0;
-            end
-            else if (bytes_to_read_emif  > (4'd8 - start_rd_addr_emif[2:0]) &&
-                    bytes_to_read_emif <= (16 - start_rd_addr_emif[2:0])) begin
-                ddr_emif_burst_count <= 2;
-                byte_enble_cnt_head <= (4'd8 - start_rd_addr_emif[2:0]);
-                byte_enble_cnt_body <= (16 - start_rd_addr_emif[2:0]);
-                byte_enble_cnt_tail <= 0;
-            end
-            else begin
-               // 1 + [(bytes_to_read_emif - (8 - start_rd_addr_emif[2:0]))/8]
-                ddr_emif_burst_count <= ((start_rd_addr_emif[2:0] + bytes_to_read_emif) >> 3)
-                                        + (|(start_rd_addr_emif[2:0] ^ bytes_to_read_emif[2:0]));
-                byte_enble_cnt_head <= (4'd8 - start_rd_addr_emif[2:0]);
-                byte_enble_cnt_body <= 8;
-                byte_enble_cnt_tail <= (start_rd_addr_emif[2:0] + bytes_to_read_emif) & 'h7;
-            end
-            */
 
 endmodule
