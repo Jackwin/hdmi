@@ -31,7 +31,6 @@ module pattern_fetch_send (
     output [255:0]  ddr_emif_write_data,
     output [321:0]  ddr_emif_byte_enable,
     output [4:0]    ddr_emif_burst_count
-
 );
 
 
@@ -144,6 +143,14 @@ localparam  PAT_TX_IDLE = 3'd0,
             PAT_TX_TAIL_WAIT = 3'd6;
 reg [2:0]   pat_tx_state;
 reg         delay_cnt;
+// For one pattern, the times of read 256-bit
+reg [23:0]  per_pat_read_body_times;
+// Whether need to read tail.
+reg         per_pat_read_tail;
+reg         per_pat_tail_pixel_num;
+reg [7:0]   shift_cnt;
+wire        msb_pat_data;
+reg [7:0]   vpg_r, vpg_g, vpg_b;
 
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
@@ -162,7 +169,6 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                     delay_cnt <= ~delay_cnt ;
                 end
                 if (delay_cnt == 'h1) begin
-
                     delay_cnt <= 'h0;
                 end
             end
@@ -173,8 +179,90 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
             PAT_TX_HEAD_WAIT: begin
                 fifo_rd_ena <= 1'b0;
                 {pat_h_pix, pat_v_pix, pat_total_pix, pat_num, pat_fill_size, pat_start_addr, pat_end_addr, pat_rsv} <= fifo_rd_data;
+                pat_tx_state <= PAT_TX_BODY;
+            end
+            PAT_TX_BODY: begin
+                per_pat_read_times <= pat_total_pix[31:8] + (|pat_total_pix[7:0]);
+                per_pat_read_tail <= |pat_total_pix[7:0];
+                per_pat_tail_pixel_num <= pat_total_pix[7:0];
+                fifo_rd_ena <= 1'b1;
+                pat_tx_state <= PAT_TX_BODY_WAIT;
+            end
+            PAT_TX_BODY_WAIT: begin
+                fifo_rd_ena <= 1'b0;
+                if (shift_cnt == 8'd254) begin
+                    if (per_pat_read_times == 'h0 && per_pat_read_tail) begin
+                        pat_tx_state <= PAT_TX_TAIL;
+                    end
+                    else if (per_pat_read_times == 'h0 && !per_pat_read_tail) begin
+                        pat_tx_state <= PAT_TX_BODY;
+                    end
+                    else begin
+                        pat_tx_state <= PAT_TX_BODY;
+                        per_pat_read_times <= per_pat_read_times - 1'd1;
+                    end
+                end
+            end
+            PAT_TX_TAIL: begin
+                fifo_rd_ena <= 1'b1;
+                pat_tx_state <= PAT_TX_TAIL_WAIT;
+            end
+            PAT_TX_TAIL_WAIT: begin
+                fifo_rd_ena <= 1'b0;
+                if (per_pat_tail_pixel_num == 'd1) begin
+                    pat_tx_state <= PAT_TX_BODY;
+                end
+                else if (shift_cnt == (per_pat_tail_pixel_num - 2'd2)) begin
+                    pat_tx_state <= PAT_TX_BODY;
+                end
+
+        endcase
+    end
+end
+
+// Generate every pixel output
+assign msb_pat_data = fifo_rd_data[255];
+always @(posedge pixel_clk or negedge pixel_rst_n) begin
+    if(~pixel_rst_n) begin
+         shift_cnt <= 0;
+    end else begin
+        // When gen_de is '1', the pixel data should be ready and start to send pixel data
+         if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de) begin
+            if (shift_cnt != 8'd255) begin
+                fifo_rd_data[255:0] <= {fifo_rd_data[254:0], 1'b0};
+                shift_cnt <= shift_cnt + 1'd1;
+            end
+            else begin
+                shift_cnt <= 'd0;
+            end
+        end
+        else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de) begin
+            if (shift_cnt != (per_pat_tail_pixel_num - 1)) begin
+                fifo_rd_data[255:0] <= {fifo_rd_data[254:0], 1'b0};
+                shift_cnt <= shift_cnt + 1'd1;
+            end
+            else begin
+                shift_cnt <= 'd0;
+            end
+        end
+        else begin
+            shift_cnt <= 'd0;
+        end
+    end
+end
 
 
+always @(posedge pixel_clk or negedge pixel_rst_n) begin
+    if(~pixel_rst_n) begin
+        {vpg_r, vpg_g, vpg_b} <= 'h0;
+        gen_de <= 1'b0;
+        gen_hs <= 1'b1;
+        gen_vs <= 1'b1;
+    end else begin
+         case(msb_pat_data)
+            1'b1: {vpg_r, vpg_g, vpg_b} <= 'h0; // black
+            1'b0: {vpg_r, vpg_g, vpg_b} <= '24'hffffff; // white
+        endcase // msb_pat_data
     end
 end
 
