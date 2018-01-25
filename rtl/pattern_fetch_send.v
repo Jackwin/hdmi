@@ -112,34 +112,35 @@ always @(posedge ddr_emif_clk or negedge ddr_emif_rst_n) begin
                     // Acquire the total read times for one pattern, and get 256-bit every read operation
                     per_pat_read_ddr3_times <= pat_total_pix_w[31:9] + (|pat_total_pix_w[7:0]);
                     //pat_read_ddr3_times_reg <= pat_total_pix_w[31:9] + (|pat_total_pix_w[7:0]);
-                    pat_num_ddr3 <= ddr3_rddata[255-32*3:255-32*4];
+                    pat_num_ddr3 <= ddr3_rddata[255-32*3-1:255-32*4];
                 end
             end
             DDR3_RD_BODY: begin
-                ddr3_rd <= 1'b1;
+                if (pat_num_ddr3 == 'h1 && per_pat_read_ddr3_cnt == (per_pat_read_ddr3_times -1'd1))
+                    ddr3_rd <= 1'b0;
+                else
+                    ddr3_rd <= 1'b1;
                 ddr3_rd_state <= DDR3_RD_BODY_WAIT;
             end
             DDR3_RD_BODY_WAIT: begin
                 ddr3_rd <= 1'b0;
-                if (ddr3_rddata_valid) begin
-                    if (per_pat_read_ddr3_cnt == (per_pat_read_ddr3_times -1'd1)) begin
-                        // Finish reading all the patterns
-                        if (pat_num_ddr3 == 'h1) begin
-                            ddr3_rd_state <= DDR3_IDLE;
-                        end
-                        // Finish reading one pattern
-                        else begin
-                            pat_num_ddr3 <= pat_num_ddr3 - 1'd1;
-                            ddr3_rd_state <= DDR3_RD_BODY;
-                            per_pat_read_ddr3_cnt <= 'h0;
-                        end
+                if (per_pat_read_ddr3_cnt == (per_pat_read_ddr3_times -1'd1)) begin
+                    // Finish reading all the patterns
+                    if (pat_num_ddr3 == 'h1) begin
+                        ddr3_rd_state <= DDR3_IDLE;
                     end
+                    // Finish reading one pattern
                     else begin
-                        ddr3_rd_addr <= ddr3_rd_addr + 1'd1;
+                        pat_num_ddr3 <= pat_num_ddr3 - 1'd1;
                         ddr3_rd_state <= DDR3_RD_BODY;
-                        //pat_read_ddr3_times <= pat_read_ddr3_times - 1'd1;
-                        per_pat_read_ddr3_cnt <= per_pat_read_ddr3_cnt + 1'd1;
+                        per_pat_read_ddr3_cnt <= 'h0;
                     end
+                end
+                else if (ddr3_rddata_valid) begin
+                    ddr3_rd_addr <= ddr3_rd_addr + 1'd1;
+                    ddr3_rd_state <= DDR3_RD_BODY;
+                    //pat_read_ddr3_times <= pat_read_ddr3_times - 1'd1;
+                    per_pat_read_ddr3_cnt <= per_pat_read_ddr3_cnt + 1'd1;
                 end
             end
             default :begin
@@ -299,7 +300,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                     // The tail length is 1
                     if (shift_cnt == (per_pat_tail_pixel_num - 1'd1) && fill_cnt == (pat_fill_size - 2)) begin
                         pat_num <= pat_num - 1'd1;
-                        if (pat_num == 'b1) begin
+                        if (pat_num == 'b0) begin
                             pat_tx_state <= PAT_TX_IDLE;
                         end
                         else begin
@@ -318,7 +319,7 @@ end
 assign fifo_rd_ena = (pat_tx_state == PAT_TX_HEAD | pat_tx_state == PAT_TX_BODY
                     | pat_tx_state == PAT_TX_TAIL |
                     (pat_tx_state == PAT_TX_TAIL_WAIT && shift_cnt == (per_pat_tail_pixel_num - 2'd1)
-                        && fill_cnt == (pat_fill_size - 1) && pat_fill_size!= 0))
+                        && fill_cnt == (pat_fill_size - 2'd2) && pat_fill_size!= 0))
                     |(pat_tx_state == PAT_TX_TAIL_WAIT && shift_cnt == (per_pat_tail_pixel_num - 2'd2) && pat_fill_size == 'd0);
 
 // Generate every pixel output
