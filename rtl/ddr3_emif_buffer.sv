@@ -14,33 +14,33 @@ module ddr3_emif_buffer # (
     parameter       DDR3_PHY_DATA_WIDTH = 256
 )
 (
-    input logic                             usr_clk,
-    input logic                             usr_rst_n,
-    input logic [ADDR_WIDTH-1:0]            start_to_wr_addr_in,
-    input logic [LEN_WIDTH-1:0]             bytes_to_write_in,
-    //logic                                   wr_req_in,
-    input logic [DDR3_USR_DATA_WIDTH-1:0]   wr_data_in,
-    input logic                             wr_valid_in,
+input logic                             usr_clk,
+input logic                             usr_rst_n,
+input logic [ADDR_WIDTH-1:0]            start_to_wr_addr_in,
+input logic [LEN_WIDTH-1:0]             bytes_to_write_in,
+//logic                                   wr_req_in,
+input logic [DDR3_USR_DATA_WIDTH-1:0]   wr_data_in,
+input logic                             wr_valid_in,
 
-    input logic                             rd_req_in,
-    input logic [ADDR_WIDTH-1:0]            start_to_rd_addr_in,
-    input logic [LEN_WIDTH-1:0]             bytes_to_rd_in,
-    output logic                            rddata_valid_out,
-    output logic [DDR3_USR_DATA_WIDTH-1:0]  rddata_out,
+input logic                             rd_req_in,
+input logic [ADDR_WIDTH-1:0]            start_to_rd_addr_in,
+input logic [LEN_WIDTH-1:0]             bytes_to_rd_in,
+output logic                            rddata_valid_out,
+output logic [DDR3_USR_DATA_WIDTH-1:0]  rddata_out,
 
-    // DDR3 IP interface
-    input logic                             ddr_emif_clk,
-    input logic                             ddr_emif_rst_n,
-    input logic                             ddr_emif_ready,
-    input logic [DDR3_PHY_DATA_WIDTH-1:0]   ddr_emif_read_data,
-    input logic                             ddr_emif_rddata_valid,
+// DDR3 IP interface
+input logic                             ddr_emif_clk,
+input logic                             ddr_emif_rst_n,
+input logic                             ddr_emif_ready,
+input logic [DDR3_PHY_DATA_WIDTH-1:0]   ddr_emif_read_data,
+input logic                             ddr_emif_rddata_valid,
 
-    output logic                            ddr_emif_read,
-    output logic                            ddr_emif_write,
-    output logic [21:0]                     ddr_emif_addr,
-    output logic [DDR3_PHY_DATA_WIDTH-1:0]  ddr_emif_write_data,
-    output logic [DDR3_PHY_DATA_WIDTH/8-1:0]ddr_emif_byte_enable,
-    output logic [4:0]                      ddr_emif_burst_count
+output logic                            ddr_emif_read,
+output logic                            ddr_emif_write,
+output logic [21:0]                     ddr_emif_addr,
+output logic [DDR3_PHY_DATA_WIDTH-1:0]  ddr_emif_write_data,
+output logic [DDR3_PHY_DATA_WIDTH/8-1:0]ddr_emif_byte_enable,
+output logic [4:0]                      ddr_emif_burst_count
 );
 
 localparam TIMES = DDR3_PHY_DATA_WIDTH/DDR3_USR_DATA_WIDTH;

@@ -34,8 +34,25 @@
 `include "vpg.h"
 
 module vpg(
+
+
 input               clk_100m,
 input               reset_n,
+
+// DDR3 interface
+input           start,
+input           ddr_emif_clk,
+input           ddr_emif_rst_n,
+input           ddr_emif_ready,
+input [255:0]   ddr_emif_read_data,
+input           ddr_emif_rddata_valid,
+
+output          ddr_emif_read,
+output          ddr_emif_write,
+output [21:0]   ddr_emif_addr,
+output [255:0]  ddr_emif_write_data,
+output [31:0]   ddr_emif_byte_enable,
+output [4:0]    ddr_emif_burst_count,
 
 input  [3:0]        mode,
 input               mode_change,
@@ -176,6 +193,44 @@ pattern_gen pattern_gen_inst(
     .gen_g(gen_g),
     .gen_b(gen_b)
 );
+
+// Load DMD pattern from DDR3 and gennerate HDMI standard signals
+
+pattern_fetch_send pattern_fetch_send_inst (
+    .pixel_clk            (clk_148_5),
+    .pixel_rst_n          (vpg_pll_locked & ~mode_change)),
+    .pixel_x              (time_x),
+    .pixel_y              (time_y),
+    .pixel_de             (time_de),
+    .pixel_hs             (time_hs),
+    .pixel_vs             (time_vs),
+    .image_width          (h_disp),
+    .image_height         (v_disp),
+    .image_color          (disp_color),
+
+    //.pat_ready_out        (pat_ready_out),
+    .start                (start),
+    .ddr_emif_clk         (ddr_emif_clk),
+    .ddr_emif_rst_n       (ddr_emif_rst_n),
+    .ddr_emif_ready       (ddr_emif_ready),
+    .ddr_emif_read_data   (ddr_emif_read_data),
+    .ddr_emif_rddata_valid(ddr_emif_rddata_valid),
+    .ddr_emif_read        (ddr_emif_read),
+    .ddr_emif_write       (ddr_emif_write),
+    .ddr_emif_addr        (ddr_emif_addr),
+    .ddr_emif_write_data  (ddr_emif_write_data),
+    .ddr_emif_byte_enable (ddr_emif_byte_enable),
+    .ddr_emif_burst_count (ddr_emif_burst_count),
+
+    .gen_de               (gen_de),
+    .gen_hs               (gen_hs),
+    .gen_vs               (gen_vs),
+    .gen_r                (gen_r),
+    .gen_g                (gen_g),
+    .gen_b                (gen_b)
+    );
+
+
 
 
 //===== output

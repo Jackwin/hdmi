@@ -12,7 +12,7 @@ module pattern_fetch_send (
     input [11:0]    image_height,
     input [1:0]     image_color,
 
-    output reg      pat_ready_out,
+    //output reg      pat_ready_out,
     // Interface to HDMI chip
     output reg         gen_de,
     output reg         gen_hs,
@@ -20,6 +20,16 @@ module pattern_fetch_send (
     output reg [7:0]    gen_r,
     output reg [7:0]    gen_g,
     output reg [7:0]    gen_b,
+
+    // On-chip memory bus
+    output reg          onchip_mem_clken,
+    output reg          onchip_mem_chip_select,
+    output reg          onchip_mem_read,
+    input wire [255:0]  onchip_mem_rddata,
+    output reg [10:0]   onchip_mem_addr,
+    output reg [31:0]   onchip_mem_byte_enable,
+    output reg          onchip_mem_write,
+    output reg [255:0]  onchip_mem_write_data,
 
     // DDR3 interface
     input           start,
@@ -89,12 +99,38 @@ always @(posedge ddr_emif_clk or negedge ddr_emif_rst_n) begin
         per_pat_read_ddr3_cnt <= 0;
         ddr3_rd_state <= DDR3_IDLE;
         pat_num_ddr3 <= 'h0;
+
+        onchip_mem_clken <= 0;
+        onchip_mem_chip_select <= 0;
+        onchip_mem_write <= 0;
+        onchip_mem_addr <= 0;
+        onchip_mem_byte_enable <= 0;
+        onchip_mem_write_data <= 0;
+        onchip_mem_read <= 0;
+        onchip_mem_clken <= 0;
+
     end else begin
-         case (ddr3_rd_state)
+        onchip_mem_clken <= 0;
+        onchip_mem_chip_select <= 0;
+        onchip_mem_write <= 0;
+        onchip_mem_addr <= 0;
+        onchip_mem_byte_enable <= 0;
+        onchip_mem_write_data <= 0;
+        onchip_mem_read <= 0;
+        onchip_mem_clken <= 0;
+
+        case (ddr3_rd_state)
             DDR3_IDLE: begin
-                ddr3_rd_addr <= 0;
+                // Read on-chip memory to determine whether the data has been loaded in DDR3
+                onchip_mem_chip_select <= 1'b1;
+                onchip_mem_read <= 1'b1;
+                onchip_mem_addr <= 0;
+                onchip_mem_clken <= 1;
+
+                ddr3_rd_addr <= 'h0;
                 ddr3_rd <= 1'b0;
-                if (ddr3_rd_start) ddr3_rd_state <= DDR3_RD_HEAD;
+                //if (ddr3_rd_start) ddr3_rd_state <= DDR3_RD_HEAD;
+                if (onchip_mem_rddata = 256'h55) ddr3_rd_state <= DDR3_RD_HEAD;;
             end
             DDR3_RD_HEAD: begin
                 if (!fifo_full && ddr_emif_ready) begin
@@ -198,7 +234,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
         pat_tx_state <= PAT_TX_IDLE;
         //fifo_rd_ena <= 1'b0;
-        pat_ready_out <= 1'b0;
+        //pat_ready_out <= 1'b0;
         per_pat_read_body_times <= 'h0;
         per_pat_read_tail <= 1'b0;
         per_pat_tail_pixel_num <= 'h0;
@@ -207,7 +243,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
     end else begin
          case(pat_tx_state)
             PAT_TX_IDLE: begin
-                pat_ready_out <= 1'b0;
+                //pat_ready_out <= 1'b0;
                 // Assume as long as the fifo is not empty in the idle state, it means pattern data is updated in FIFO
                 // HOW TO CONTROL ??
                 if (!fifo_empty) begin
@@ -222,7 +258,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
             end
             PAT_TX_HEAD_WAIT: begin
               //  fifo_rd_ena <= 1'b0;
-                pat_ready_out <= 1'b1;
+                //pat_ready_out <= 1'b1;
                 {pat_h_pix, pat_v_pix, pat_total_pix, pat_num, pat_fill_size, pat_start_addr, pat_end_addr, pat_rsv} <= fifo_rd_data;
                 pat_tx_state <= PAT_TX_BODY;
             end
