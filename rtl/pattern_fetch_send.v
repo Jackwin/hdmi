@@ -33,18 +33,18 @@ module pattern_fetch_send (
 
     // DDR3 interface
     input           start,
-    input           ddr_emif_clk,
-    input           ddr_emif_rst_n,
-    input           ddr_emif_ready,
-    input [255:0]   ddr_emif_read_data,
-    input           ddr_emif_rddata_valid,
+    input           ddr3_emif_clk,
+    input           ddr3_emif_rst_n,
+    input           ddr3_emif_ready,
+    input [255:0]   ddr3_emif_read_data,
+    input           ddr3_emif_rddata_valid,
 
-    output          ddr_emif_read,
-    output          ddr_emif_write,
-    output [21:0]   ddr_emif_addr,
-    output [255:0]  ddr_emif_write_data,
-    output [31:0]   ddr_emif_byte_enable,
-    output [4:0]    ddr_emif_burst_count
+    output          ddr3_emif_read,
+    output          ddr3_emif_write,
+    output [21:0]   ddr3_emif_addr,
+    output [255:0]  ddr3_emif_write_data,
+    output [31:0]   ddr3_emif_byte_enable,
+    output [4:0]    ddr3_emif_burst_count
 );
 
 
@@ -63,36 +63,37 @@ reg [31:0]  pat_num_ddr3;
 reg [23:0]  per_pat_read_ddr3_cnt;
 reg [23:0]  per_pat_read_ddr3_times;
 
-reg [2:0]   ddr3_rd_state = 0;
+reg [2:0]   ddr3_rd_state/*synthesis keep*/;
 
 wire        ddr3_rd_start;
-reg         ddr3_rd = 1'b0;
+reg         ddr3_rd;
 reg [21:0]  ddr3_rd_addr;
 
 wire        ddr3_rddata_valid;
 wire [255:0]ddr3_rddata;
 
 wire        fifo_wr_clk, fifo_rd_clk;
-wire        fifo_wr_ena, fifo_full;
-wire        fifo_empty;
-wire        fifo_rd_ena;
-wire [255:0]fifo_wr_data, fifo_rd_data;
+wire        fifo_wr_ena, fifo_full /*synthesis keep*/;
+wire        fifo_empty/*synthesis keep*/;
+wire        fifo_rd_ena/*synthesis keep*/;
+wire [255:0]fifo_wr_data, fifo_rd_data/*synthesis keep*/;
 
 
-assign ddr3_rddata = ddr_emif_read_data;
-assign ddr3_rddata_valid = ddr_emif_rddata_valid;
-assign ddr_emif_read = ddr3_rd;
-assign ddr_emif_addr = ddr3_rd_addr;
+assign ddr3_rddata = ddr3_emif_read_data;
+assign ddr3_rddata_valid = ddr3_emif_rddata_valid;
+assign ddr3_emif_read = ddr3_rd;
+assign ddr3_emif_addr = ddr3_rd_addr;
 assign ddr3_rd_start = start;
 
-assign fifo_wr_clk = ddr_emif_clk;
+assign fifo_wr_clk = ddr3_emif_clk;
 assign fifo_wr_ena = ddr3_rddata_valid;
 assign fifo_wr_data = ddr3_rddata;
 
 assign pat_total_pix_w = ddr3_rddata[191:159];
 
-always @(posedge ddr_emif_clk or negedge ddr_emif_rst_n) begin
-    if(~ddr_emif_rst_n) begin
+
+always @(posedge ddr3_emif_clk or negedge ddr3_emif_rst_n) begin
+    if(~ddr3_emif_rst_n) begin
         ddr3_rd <= 0;
         ddr3_rd_addr <= 0;
         per_pat_read_ddr3_times <= 0;
@@ -130,10 +131,10 @@ always @(posedge ddr_emif_clk or negedge ddr_emif_rst_n) begin
                 ddr3_rd_addr <= 'h0;
                 ddr3_rd <= 1'b0;
                 //if (ddr3_rd_start) ddr3_rd_state <= DDR3_RD_HEAD;
-                if (onchip_mem_rddata = 256'h55) ddr3_rd_state <= DDR3_RD_HEAD;;
+                if ((onchip_mem_rddata == 256'h55) | ddr3_rd_start) ddr3_rd_state <= DDR3_RD_HEAD;;
             end
             DDR3_RD_HEAD: begin
-                if (!fifo_full && ddr_emif_ready) begin
+                if (!fifo_full && ddr3_emif_ready) begin
                     ddr3_rd <= 1'b1;
                     ddr3_rd_addr <= 22'h0;
                     ddr3_rd_state <= DDR3_RD_HEAD_WAIT;
@@ -404,16 +405,20 @@ end
 
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
-        {vpg_r, vpg_g, vpg_b} <= 'h0;
+        {gen_r, gen_g, gen_b} <= 'h0;
         gen_de <= 1'b0;
         gen_hs <= 1'b1;
         gen_vs <= 1'b1;
     end else begin
+        gen_de <= pixel_de;
+        gen_hs <= pixel_hs;
+        gen_vs <= pixel_vs;
          case(msb_pat_data)
-            1'b1: {vpg_r, vpg_g, vpg_b} <= 'h0; // black
-            1'b0: {vpg_r, vpg_g, vpg_b} <= 24'hffffff; // white
+            1'b1: {gen_r, gen_g, gen_b} <= 'h0; // black
+            1'b0: {gen_r, gen_g, gen_b} <= 24'hffffff; // white
         endcase // msb_pat_data
     end
 end
+
 
 endmodule

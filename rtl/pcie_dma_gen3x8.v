@@ -40,9 +40,30 @@ module pcie_dma_gen3x8 #(
     input  wire        oct_rzqin,                //          oct.rzqin
     input              cpu_resetn,
 
-    input wire         ddr3_usr_clk,
-    input wire         ddr3_usr_rst_n,
+    output wire        ddr3_clk,
+    output wire        ddr3_rst_n,
 
+    input wire  [21:0] ddr3_addr,
+    input wire  [4:0]  ddr3_burst_count,
+    input wire         ddr3_begin_burst,
+    input wire         ddr3_write,
+    input wire  [255:0]ddr3_write_data,
+    input wire  [31:0] ddr3_byte_ena,
+    input wire         ddr3_read,
+
+    output wire        ddr3_ready,
+    output wire [255:0]ddr3_read_data,
+    output wire        ddr3_rddata_valid,
+
+    input wire          onchip_mem_clken,
+    input wire          onchip_mem_chip_select,
+    input wire          onchip_mem_read,
+    output wire [255:0] onchip_mem_rddata,
+    input wire [10:0]   onchip_mem_addr,
+    input wire [31:0]   onchip_mem_byte_enable,
+    input wire          onchip_mem_write,
+    input wire [255:0]  onchip_mem_write_data
+/*
     input wire [ADDR_WIDTH-1:0]            ddr3_start_to_wr_addr_in,
     input wire [LEN_WIDTH-1:0]             ddr3_bytes_to_write_in,
     input wire                             ddr3_wr_req_in,
@@ -54,6 +75,7 @@ module pcie_dma_gen3x8 #(
     input wire [LEN_WIDTH-1:0]             ddr3_bytes_to_rd_in,
     output wire                            ddr3_rddata_valid_out,
     output wire [DDR3_USR_DATA_WIDTH-1:0]  ddr3_rddata_out
+    */
 );
 
 wire [52:0]         tl_cfg_tl_cfg_sts;
@@ -246,23 +268,34 @@ pcie_de_ep_dma_g3x8_integrated u0 (
     .clk_clk                                                 (pll_ref_clk),                                                 //                                     clk.clk
     .reset_reset_n                                           (cpu_resetn),                                            //                                   reset.reset_n
 
-    .ddr3_clk                                           (ddr_emif_clk),
-    .ddr3_rst_n                                         (ddr_emif_rst_n),
+    .ddr3_clk                                               (ddr3_clk),
+    .ddr3_rst_n                                             (ddr3_rst_n),
 
-    .ddr3_addr                                          (ddr_emif_addr),
-    .ddr3_burst_count                                   (ddr_emif_burst_count),
-    .ddr3_begin_burst                                   (ddr_emif_clk),
-    .ddr3_wr                                            (ddr_emif_write),
-    .ddr3_wr_data                                       (ddr_emif_write_data),
-    .ddr3_byte_ena                                      (ddr_emif_byte_enable),
-    .ddr3_rd                                            (ddr_emif_rd),
+    .ddr3_addr                                              (ddr3_addr),
+    .ddr3_burst_count                                       (ddr3_burst_count),
+    .ddr3_begin_burst                                       (ddr3_begin_burst),
+    .ddr3_write                                             (ddr3_write),
+    .ddr3_write_data                                        (ddr3_write_data),
+    .ddr3_byte_ena                                          (ddr3_byte_ena),
+    .ddr3_read                                              (ddr3_read),
 
-    .ddr3_ready                                         (ddr_emif_ready),
-    .ddr3_rd_data                                       (ddr_emif_read_data),
-    .ddr3_rd_valid                                      (ddr_emif_rddata_valid)
+    .ddr3_ready                                             (ddr3_ready),
+    .ddr3_read_data                                         (ddr3_read_data),
+    .ddr3_rddata_valid                                      (ddr3_rddata_valid),
+
+    .onchip_mem_chip_select                                      (onchip_mem_select),
+    .onchip_mem_clken                                       (onchip_mem_clken),
+    .onchip_mem_read                                        (onchip_mem_read),
+    .onchip_mem_rddata                                      (onchip_mem_rddata),
+    .onchip_mem_addr                                        (onchip_mem_addr),
+    .onchip_mem_byte_enable                                 (onchip_mem_byte_enable),
+    .onchip_mem_write                                       (onchip_mem_write),
+    .onchip_mem_write_data                                  (onchip_mem_write_data)
 
     );
 
+
+/*
 ddr3_emif_buffer emif_buffer_inst (
     .usr_clk              (ddr3_usr_clk),
     .usr_rst_n            (ddr3_usr_rst_n),
@@ -294,5 +327,5 @@ ddr3_emif_buffer emif_buffer_inst (
 
 
   );
-
+*/
 endmodule

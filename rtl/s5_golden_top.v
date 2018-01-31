@@ -276,42 +276,92 @@ iobuf iobuf (
     );
 */
 assign adc_clk_p = fpga_adc_clk_p;
+
+wire          onchip_mem_clken;
+wire          onchip_mem_chip_select;
+wire          onchip_mem_read;
+wire [255:0]  onchip_mem_rddata;
+wire [10:0]   onchip_mem_addr;
+wire [31:0]   onchip_mem_byte_enable;
+wire          onchip_mem_write;
+wire [255:0]  onchip_mem_write_data;
+
+// DDR3 interface
+reg            start, start_r/*synthesis keep*/;
+wire           start_vio;
+wire           ddr3_clk;
+wire           ddr3_rst_n;
+wire           ddr3_ready;
+wire [255:0]   ddr3_read_data;
+wire           ddr3_rddata_valid;
+
+wire          ddr3_read;
+wire          ddr3_write;
+wire [21:0]   ddr3_addr;
+wire [255:0]  ddr3_write_data;
+wire [31:0]   ddr3_byte_enable;
+wire [4:0]    ddr3_burst_count;
+
+
 fast_wps_nios_top fast_wps_nios_top_i (
-    .clk50m_in      (clkin_50),
-    .reset_n        (cpu_resetn),
+    .clk50m_in              (clkin_50),
+    .reset_n                (cpu_resetn),
 
-    .led_o(user_led_g),
-    .shrink_led(shrink_led),
-    .pll_led(pll_led),
-    .clk_200m_out(ddr3_usr_clk),
-    .rst_n_out(ddr3_usr_rst_n),
+    .led_o                  (user_led_g),
+    .shrink_led             (shrink_led),
+    .pll_led                (pll_led),
+    .clk_200m_out           (ddr3_usr_clk),
+    .rst_n_out              (ddr3_usr_rst_n),
 
-    .iic_sda(iic_sda),
-    .iic_scl(iic_scl),
+    .iic_sda                (iic_sda),
+    .iic_scl                (iic_scl),
 
-    .adc_dco       (adc_dco),
-    .adc_data      (adc_data),
-    .adc_oe_n      (adc_oe_n),
-    .adc_or_in     (adc_or_in),
-    .fpga_adc_clk_p(fpga_adc_clk_p),
+    .adc_dco                (adc_dco),
+    .adc_data               (adc_data),
+    .adc_oe_n               (adc_oe_n),
+    .adc_or_in              (adc_or_in),
+    .fpga_adc_clk_p         (fpga_adc_clk_p),
+
+// DDR3 interface
+    .start                 (start),
+    .ddr3_emif_clk         (ddr3_clk),
+    .ddr3_emif_rst_n       (ddr3_rst_n),
+    .ddr3_emif_ready       (ddr3_ready),
+    .ddr3_emif_read_data   (ddr3_read_data),
+    .ddr3_emif_rddata_valid(ddr3_rddata_valid),
+    .ddr3_emif_read        (ddr3_read),
+    .ddr3_emif_write       (ddr3_write),
+    .ddr3_emif_addr        (ddr3_addr),
+    .ddr3_emif_write_data  (ddr3_write_data),
+    .ddr3_emif_byte_enable (ddr3_byte_enable),
+    .ddr3_emif_burst_count (ddr3_burst_count),
+
+    .onchip_mem_clken      (onchip_mem_clken),
+    .onchip_mem_chip_select(onchip_mem_chip_select),
+    .onchip_mem_read       (onchip_mem_read),
+    .onchip_mem_rddata     (onchip_mem_rddata),
+    .onchip_mem_addr       (onchip_mem_addr),
+    .onchip_mem_byte_enable(onchip_mem_byte_enable),
+    .onchip_mem_write      (onchip_mem_write),
+    .onchip_mem_write_data (onchip_mem_write_data),
     //.fpga_adc_clk_n(fpga_adc_clk_n),
-    .or_led        (or_led),
-    .adc_sclk      (adc_sclk),
-    .adc_sdio      (adc_sdio),
-    .adc_cs_n      (adc_cs_n),
-    .dac_data      (dac_data),
+    .or_led                 (or_led),
+    .adc_sclk               (adc_sclk),
+    .adc_sdio               (adc_sdio),
+    .adc_cs_n               (adc_cs_n),
+    .dac_data               (dac_data),
 
-    .hdmi_tx_rst_n(hdmi_tx_rst_n),
-    .hdmi_int_n(hdmi_tx_int_n),
-    .hdmi_pcsda(hsma_d[3]),
-    .hdmi_pcscl(hsma_d[1]),
-    .hdmi_tx_pclk(hdmi_tx_pclk),
-    .hdmi_tx_rd(hdmi_tx_rd),
-    .hdmi_tx_gd(hdmi_tx_gd),
-    .hdmi_tx_bd(hdmi_tx_bd),
-    .hdmi_tx_de(hdmi_tx_de),
-    .hdmi_tx_vs(hdmi_tx_vs),
-    .hdmi_tx_hs(hdmi_tx_hs)
+    .hdmi_tx_rst_n          (hdmi_tx_rst_n),
+    .hdmi_int_n             (hdmi_tx_int_n),
+    .hdmi_pcsda             (hsma_d[3]),
+    .hdmi_pcscl             (hsma_d[1]),
+    .hdmi_tx_pclk           (hdmi_tx_pclk),
+    .hdmi_tx_rd             (hdmi_tx_rd),
+    .hdmi_tx_gd             (hdmi_tx_gd),
+    .hdmi_tx_bd             (hdmi_tx_bd),
+    .hdmi_tx_de             (hdmi_tx_de),
+    .hdmi_tx_vs             (hdmi_tx_vs),
+    .hdmi_tx_hs             (hdmi_tx_hs)
 
    );
 
@@ -383,22 +433,51 @@ pcie_dma_gen3x8 pcie_dma_gen3x8_i (
    .oct_rzqin        (oct_rzqin),
    .cpu_resetn       (cpu_resetn),
 
-   .ddr3_usr_clk            (ddr3_usr_clk),
-   .ddr3_usr_rst_n          (ddr3_usr_rst_n),
-   .ddr3_start_to_wr_addr_in(ddr3_start_to_wr_addr_in),
-   .ddr3_bytes_to_write_in  (ddr3_bytes_to_wr_in),
-   .ddr3_wr_req_in          (ddr3_wr_req_in),
-   .ddr3_wr_data_in         (ddr3_wr_data_in),
-   .ddr3_wr_valid_in        (ddr3_wr_valid_in),
-
-   .ddr3_rd_req_in          (ddr3_rd_req_in),
-   .ddr3_start_to_rd_addr_in(ddr3_start_to_rd_addr_in),
-   .ddr3_bytes_to_rd_in     (ddr3_bytes_to_rd_in),
-   .ddr3_rddata_valid_out   (ddr3_rddata_valid_out),
-   .ddr3_rddata_out         (ddr3_rddata_out)
+   .ddr3_clk            (ddr3_clk),
+   .ddr3_rst_n          (ddr3_rst_n),
+   .ddr3_addr             (ddr3_addr),
+   .ddr3_burst_count      (ddr3_burst_count),
+   .ddr3_begin_burst      (ddr3_begin_burst),
+   .ddr3_write             (ddr3_write),
+   .ddr3_write_data       (ddr3_write_data),
+   .ddr3_byte_ena         (ddr3_byte_ena),
+   .ddr3_read             (ddr3_read),
+   .ddr3_ready            (ddr3_ready),
+   .ddr3_read_data        (ddr3_read_data),
+   .ddr3_rddata_valid     (ddr3_rddata_valid),
+   .onchip_mem_clken      (onchip_mem_clken),
+   .onchip_mem_read       (onchip_mem_read),
+   .onchip_mem_rddata     (onchip_mem_rddata),
+   .onchip_mem_addr       (onchip_mem_addr),
+   .onchip_mem_byte_enable(onchip_mem_byte_enable),
+   .onchip_mem_write      (onchip_mem_write),
+   .onchip_mem_write_data (onchip_mem_write_data)
    );
 
+altsource_probe #(
+    .sld_auto_instance_index ("YES"),
+    .sld_instance_index      (0),
+    .instance_id             ("STA"),
+    .probe_width             (0),
+    .source_width            (1),
+    .source_initial_value    ("0"),
+    .enable_metastability    ("NO")
+) ddr3_addr_source (
+    .source(start_vio)
+);
 
+
+always @(posedge ddr3_usr_clk or negedge ddr3_usr_rst_n) begin
+    if(~ddr3_usr_rst_n) begin
+        start_r <= 0;
+        start <= 0;
+    end else begin
+        start_r <= start_vio;
+        start <= ~start_r & start_vio;
+    end
+end
+
+/*
 // Generate data for DDR testing
 
 // DDR write
@@ -520,5 +599,5 @@ source_probe ddr3_rddata_source (
     .source_clk (ddr3_usr_clk), // source_clk.clk
     .probe     ({ddr3_rddata_out, ddr3_rddata_valid_out})      //    sources.source
 );
-
+*/
 endmodule

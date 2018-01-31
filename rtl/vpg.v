@@ -39,20 +39,30 @@ module vpg(
 input               clk_100m,
 input               reset_n,
 
+
 // DDR3 interface
 input           start,
-input           ddr_emif_clk,
-input           ddr_emif_rst_n,
-input           ddr_emif_ready,
-input [255:0]   ddr_emif_read_data,
-input           ddr_emif_rddata_valid,
+input           ddr3_emif_clk,
+input           ddr3_emif_rst_n,
+input           ddr3_emif_ready,
+input [255:0]   ddr3_emif_read_data,
+input           ddr3_emif_rddata_valid,
 
-output          ddr_emif_read,
-output          ddr_emif_write,
-output [21:0]   ddr_emif_addr,
-output [255:0]  ddr_emif_write_data,
-output [31:0]   ddr_emif_byte_enable,
-output [4:0]    ddr_emif_burst_count,
+output          ddr3_emif_read,
+output          ddr3_emif_write,
+output [21:0]   ddr3_emif_addr,
+output [255:0]  ddr3_emif_write_data,
+output [31:0]   ddr3_emif_byte_enable,
+output [4:0]    ddr3_emif_burst_count,
+
+output          onchip_mem_clken,
+output          onchip_mem_chip_select,
+output          onchip_mem_read,
+input [255:0]   onchip_mem_rddata,
+output [10:0]   onchip_mem_addr,
+output [31:0]   onchip_mem_byte_enable,
+output          onchip_mem_write,
+output [255:0]  onchip_mem_write_data,
 
 input  [3:0]        mode,
 input               mode_change,
@@ -175,6 +185,7 @@ wire [7:0]    gen_g/*synthesis keep*/;
 wire [7:0]    gen_b/*synthesis keep*/;
 
 //convert time: 1-clock
+/*
 pattern_gen pattern_gen_inst(
     .reset_n(vpg_pll_locked & ~mode_change),
     .pixel_clk(clk_148_5),
@@ -193,12 +204,12 @@ pattern_gen pattern_gen_inst(
     .gen_g(gen_g),
     .gen_b(gen_b)
 );
-
+*/
 // Load DMD pattern from DDR3 and gennerate HDMI standard signals
 
 pattern_fetch_send pattern_fetch_send_inst (
     .pixel_clk            (clk_148_5),
-    .pixel_rst_n          (vpg_pll_locked & ~mode_change)),
+    .pixel_rst_n          (vpg_pll_locked & ~mode_change),
     .pixel_x              (time_x),
     .pixel_y              (time_y),
     .pixel_de             (time_de),
@@ -209,18 +220,27 @@ pattern_fetch_send pattern_fetch_send_inst (
     .image_color          (disp_color),
 
     //.pat_ready_out        (pat_ready_out),
+    .ddr3_emif_clk         (ddr_emif_clk),
+    .ddr3_emif_rst_n       (ddr_emif_rst_n),
+    .onchip_mem_clken      (onchip_mem_clken),
+    .onchip_mem_chip_select(onchip_mem_chip_select),
+    .onchip_mem_read       (onchip_mem_read),
+    .onchip_mem_rddata     (onchip_mem_rddata),
+    .onchip_mem_addr       (onchip_mem_addr),
+    .onchip_mem_byte_enable(onchip_mem_byte_enable),
+    .onchip_mem_write      (onchip_mem_write),
+    .onchip_mem_write_data (onchip_mem_write_data),
+
     .start                (start),
-    .ddr_emif_clk         (ddr_emif_clk),
-    .ddr_emif_rst_n       (ddr_emif_rst_n),
-    .ddr_emif_ready       (ddr_emif_ready),
-    .ddr_emif_read_data   (ddr_emif_read_data),
-    .ddr_emif_rddata_valid(ddr_emif_rddata_valid),
-    .ddr_emif_read        (ddr_emif_read),
-    .ddr_emif_write       (ddr_emif_write),
-    .ddr_emif_addr        (ddr_emif_addr),
-    .ddr_emif_write_data  (ddr_emif_write_data),
-    .ddr_emif_byte_enable (ddr_emif_byte_enable),
-    .ddr_emif_burst_count (ddr_emif_burst_count),
+    .ddr3_emif_ready       (ddr3_emif_ready),
+    .ddr3_emif_read_data   (ddr3_emif_read_data),
+    .ddr3_emif_rddata_valid(ddr3_emif_rddata_valid),
+    .ddr3_emif_read        (ddr3_emif_read),
+    .ddr3_emif_write       (ddr3_emif_write),
+    .ddr3_emif_addr        (ddr3_emif_addr),
+    .ddr3_emif_write_data  (ddr3_emif_write_data),
+    .ddr3_emif_byte_enable (ddr3_emif_byte_enable),
+    .ddr3_emif_burst_count (ddr3_emif_burst_count),
 
     .gen_de               (gen_de),
     .gen_hs               (gen_hs),

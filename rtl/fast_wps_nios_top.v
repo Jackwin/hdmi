@@ -19,6 +19,31 @@ module fast_wps_nios_top (
     input           adc_or_in,
 
     output          fpga_adc_clk_p,
+// On-chip memory interface
+    output           onchip_mem_clken,
+    output          onchip_mem_chip_select,
+    output          onchip_mem_read,
+    input  [255:0]  onchip_mem_rddata,
+    output [10:0]   onchip_mem_addr,
+    output [31:0]   onchip_mem_byte_enable,
+    output          onchip_mem_write,
+    output [255:0]  onchip_mem_write_data,
+
+    // DDR3 interface
+    input           start,
+    input           ddr3_emif_clk,
+    input           ddr3_emif_rst_n,
+    input           ddr3_emif_ready,
+    input [255:0]   ddr3_emif_read_data,
+    input           ddr3_emif_rddata_valid,
+
+    output          ddr3_emif_read,
+    output          ddr3_emif_write,
+    output [21:0]   ddr3_emif_addr,
+    output [255:0]  ddr3_emif_write_data,
+    output [31:0]   ddr3_emif_byte_enable,
+    output [4:0]    ddr3_emif_burst_count,
+
 //    output          fpga_adc_clk_n,
     output          or_led,
     output          adc_sclk,
@@ -143,6 +168,29 @@ assign shrink_led = counter[26];
 vpg vpg_inst(
     .clk_100m    (clk_100m),
     .reset_n    (pll_locked),
+
+    .start                 (start),
+    .ddr3_emif_clk         (ddr3_emif_clk),
+    .ddr3_emif_rst_n       (ddr3_emif_rst_n),
+    .ddr3_emif_ready       (ddr3_emif_ready),
+    .ddr3_emif_read_data   (ddr3_emif_read_data),
+    .ddr3_emif_rddata_valid(ddr3_emif_rddata_valid),
+    .ddr3_emif_read        (ddr3_emif_read),
+    .ddr3_emif_write       (ddr3_emif_write),
+    .ddr3_emif_addr        (ddr3_emif_addr),
+    .ddr3_emif_write_data  (ddr3_emif_write_data),
+    .ddr3_emif_byte_enable (ddr3_emif_byte_enable),
+    .ddr3_emif_burst_count (ddr3_emif_burst_count),
+
+    .onchip_mem_clken      (onchip_mem_clken),
+    .onchip_mem_chip_select(onchip_mem_chip_select),
+    .onchip_mem_read       (onchip_mem_read),
+    .onchip_mem_rddata     (onchip_mem_rddata),
+    .onchip_mem_addr       (onchip_mem_addr),
+    .onchip_mem_byte_enable(onchip_mem_byte_enable),
+    .onchip_mem_write      (onchip_mem_write),
+    .onchip_mem_write_data (onchip_mem_write_data),
+
     .mode       (vpg_disp_mode),
     .mode_change(vpg_disp_mode_change),
     .disp_color (vpg_disp_color),
