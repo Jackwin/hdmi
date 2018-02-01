@@ -220,8 +220,8 @@ pattern_fetch_send pattern_fetch_send_inst (
     .image_color          (disp_color),
 
     //.pat_ready_out        (pat_ready_out),
-    .ddr3_emif_clk         (ddr_emif_clk),
-    .ddr3_emif_rst_n       (ddr_emif_rst_n),
+    .ddr3_emif_clk         (ddr3_emif_clk),
+    .ddr3_emif_rst_n       (ddr3_emif_rst_n),
     .onchip_mem_clken      (onchip_mem_clken),
     .onchip_mem_chip_select(onchip_mem_chip_select),
     .onchip_mem_read       (onchip_mem_read),

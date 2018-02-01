@@ -468,7 +468,7 @@ altsource_probe #(
 
 
 always @(posedge ddr3_clk or negedge ddr3_rst_n) begin
-    if(~ddr3_usr_rst_n) begin
+    if(~ddr3_rst_n) begin
         start_r <= 0;
         start <= 0;
     end else begin

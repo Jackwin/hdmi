@@ -131,7 +131,8 @@ always @(posedge ddr3_emif_clk or negedge ddr3_emif_rst_n) begin
                 ddr3_rd_addr <= 'h0;
                 ddr3_rd <= 1'b0;
                 //if (ddr3_rd_start) ddr3_rd_state <= DDR3_RD_HEAD;
-                if ((onchip_mem_rddata == 256'h55) | ddr3_rd_start) ddr3_rd_state <= DDR3_RD_HEAD;;
+                if ((onchip_mem_rddata == 256'h55) | ddr3_rd_start)
+						ddr3_rd_state <= DDR3_RD_HEAD;;
             end
             DDR3_RD_HEAD: begin
                 if (!fifo_full && ddr3_emif_ready) begin
@@ -161,7 +162,7 @@ always @(posedge ddr3_emif_clk or negedge ddr3_emif_rst_n) begin
             end
             DDR3_RD_BODY_WAIT: begin
                 ddr3_rd <= 1'b0;
-                if (per_pat_read_ddr3_cnt == (per_pat_read_ddr3_times -1'd1)) begin
+                if ((per_pat_read_ddr3_cnt == (per_pat_read_ddr3_times -1'd1)) && ddr3_rddata_valid) begin
                     // Finish reading all the patterns
                     if (pat_num_ddr3 == 'h1) begin
                         ddr3_rd_state <= DDR3_IDLE;
