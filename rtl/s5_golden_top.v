@@ -310,8 +310,8 @@ fast_wps_nios_top fast_wps_nios_top_i (
     .led_o                  (user_led_g),
     .shrink_led             (shrink_led),
     .pll_led                (pll_led),
-    .clk_200m_out           (ddr3_usr_clk),
-    .rst_n_out              (ddr3_usr_rst_n),
+    //.clk_200m_out           (ddr3_usr_clk),
+    //.rst_n_out              (ddr3_usr_rst_n),
 
     .iic_sda                (iic_sda),
     .iic_scl                (iic_scl),
@@ -467,7 +467,7 @@ altsource_probe #(
 );
 
 
-always @(posedge ddr3_usr_clk or negedge ddr3_usr_rst_n) begin
+always @(posedge ddr3_clk or negedge ddr3_rst_n) begin
     if(~ddr3_usr_rst_n) begin
         start_r <= 0;
         start <= 0;
