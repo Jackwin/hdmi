@@ -1,0 +1,10 @@
+Sun Feb 04 20:34:57 +0800 2018
+Trace back: can't read "vsimPriv(.main_pane.wave.interior.cs.body.pw.wf.grid.row0,name.data:tree)": no such element in array
+    while executing
+"Wave::SetDefaultTree $vsimPriv($widget:tree)"
+    (procedure "Wave::Name1Down" line 12)
+    invoked from within
+"Wave::Name1Down .main_pane.wave.interior.cs.body.pw.wf.grid.row0,name.data 175 447"
+    (command bound to event)
+  <2:C:/modeltech64_10.4/win64/tk8.5/bgerror.tcl:92: ::tkerror {can't read "vsimPriv(.main_pane.wave.interior.cs.body.pw.wf.grid.row0,name.data:tree)": no such element in array}
+  <1:eval:1: ::tk::dialog::error::bgerror {can't read "vsimPriv(.main_pane.wave.interior.cs.body.pw.wf.grid.row0,name.data:tree)": no such element in array}

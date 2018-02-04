@@ -1,3 +1,4 @@
+`timescale 1 ns / 1 ps
 module fast_pat_fetch (
     input           clk,
     input           rst_n,
@@ -16,7 +17,7 @@ module fast_pat_fetch (
     input           h_sync_in,
     input           v_sync_in,
     input           de_in,
-    output [23:0]   pix_data_out
+    output reg [23:0]   pix_data_out
 
 );
 
@@ -25,7 +26,7 @@ localparam  IDLE = 2'd0,
             READ_ONCHIP_MEM = 2'd2,
             HALT = 2'd3;
 
-wire        timer_ena;
+reg        timer_ena;
 wire        timer_out;
 wire        timer_rst;
 reg [1:0]   state;
@@ -36,10 +37,16 @@ reg         mem_rd;
 reg         mem_rd_valid;
 reg         mem_sel;
 reg [10:0]  mem_addr;
-reg [255:0] mem_data_r0, mem_data_r1, mem_data_r2;
+//reg [255:0] mem_data_r0, mem_data_r1, mem_data_r2;
 reg [767:0] mem_data;
 reg [4:0]   cnt;
 reg [11:0]  line_cnt;
+
+
+assign onchip_mem_chip_select = mem_sel;
+assign onchip_mem_chip_read = mem_rd;
+assign onchip_mem_addr = mem_addr;
+//assign onchip_mem_byte_enable =
 
 // The read latency is 1 for the onchip memory
 always @(posedge clk) begin
@@ -51,10 +58,14 @@ always @(posedge clk) begin
          mem_data <= 0;
     end else begin
         if (mem_rd_valid) begin
+            //mem_data[767:512] <= mem_data[511:256];
+            //mem_data[511:256] <= mem_data[255:0];
+            //mem_data[255:0] <= onchip_mem_read_data;
             case(mem_rd_cnt)
                 2'd0: mem_data[767:512] <= onchip_mem_read_data;
                 2'd1: mem_data[511:256] <= onchip_mem_read_data;
                 2'd2: mem_data[255:0] <= onchip_mem_read_data;
+                2'd3: mem_data <= mem_data;
                 default:mem_data <= 'h0;
             endcase // mem_rd_cnt
         end
@@ -64,6 +75,7 @@ end
 // Count the lines
 reg h_sync_r, h_sync_p;
 reg v_sync_r, v_sync_p;
+reg de_r, de_p;
 always @(posedge clk) begin
     if(~rst_n) begin
         h_sync_r <= 1'b0;
@@ -75,7 +87,11 @@ always @(posedge clk) begin
         h_sync_p <= ~h_sync_r & h_sync_in;
 
         v_sync_r <= v_sync_in;
-        v_sync_p <= ~v_sync_r & v_sync_in
+        v_sync_p <= ~v_sync_r & v_sync_in;
+
+        // capturing the falling edge of de_in
+        de_r <= de_in;
+        de_p <= ~de_in & de_r;
     end
 end
 
@@ -107,12 +123,15 @@ always @(posedge clk) begin
         line_cnt <= 'h0;
     end else begin
         mem_rd <= 1'b0;
-
+        mem_sel <= 1'b0;
         case (state)
             IDLE: begin
-                if (onchip_mem_read_data = 'h77) begin
+                mem_sel <= 1'b1;
+                mem_rd <= 1'b1;
+                if (onchip_mem_read_data[7:0] == 'h77) begin
                     state <= INIT_READ_ONCHIP_MEM;
                     mem_rd <= 1'b1;
+                    mem_sel <= 1'b1;
                 end
                 timer_ena <= 1'b1;
             end
@@ -131,6 +150,7 @@ always @(posedge clk) begin
                 else if (mem_rd_valid) begin
                     mem_rd_cnt <= mem_rd_cnt + 1'd1;
                     mem_rd <= 1'b1;
+                    mem_sel <= 1'b1;
                     mem_addr <= mem_addr + 1'd1;
                 end
 
@@ -181,23 +201,26 @@ always @(posedge clk) begin
 
                 if (cnt == 5'd27 || cnt == 5'd29 || cnt == 5'd31) begin
                     mem_rd <= 1'd1;
+                    mem_sel <= 1'b1;
                     mem_addr <= mem_addr + 1'd1;
                 end
                 else begin
                     mem_rd <= 1'd0;
                 end
+
+                if (line_cnt == 'd1080 && de_p) begin
+                    state <= IDLE;
+                end
             end
-
-
-
-
-
-
+            default: begin
+                state <= IDLE;
+            end
+        endcase
     end
 end
 
 
-
+/*
 timer # (
     .MAX(512)
     )
@@ -208,7 +231,7 @@ timer_inst (
     .timer_rst(timer_rst),
     .timer_out(timer_out)
     );
-
+*/
 
 
 
