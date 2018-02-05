@@ -201,9 +201,6 @@ always @(posedge clk) begin
                         default: pix_data_out <= 'h0;
                     endcase // cnt
                 end
-                else begin
-                    cnt <= 'h0;
-                end
 
                 if (cnt == 5'd27 || cnt == 5'd29 || cnt == 5'd31) begin
                     mem_rd <= 1'd1;
@@ -213,6 +210,16 @@ always @(posedge clk) begin
                 else begin
                     mem_rd <= 1'd0;
                 end
+
+                if (mem_rd_valid) begin
+                    if (mem_rd_cnt == 2'd2) begin
+                        mem_rd_cnt <= 'h0;
+                    end
+                    else begin
+                        mem_rd_cnt <= mem_rd_cnt + 1'd1;
+                    end
+                end
+
 
                 if (line_cnt == 'd1080 && de_p) begin
                     state <= IDLE;
