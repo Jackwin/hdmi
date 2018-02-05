@@ -60,15 +60,17 @@ always @(posedge clk) begin
         if (mem_rd_valid) begin
             //mem_data[767:512] <= mem_data[511:256];
             //mem_data[511:256] <= mem_data[255:0];
-            //mem_data[255:0] <= onchip_mem_read_data;
+            //mem_data[255:0] <= onchip_mem_read_data;\
             case(mem_rd_cnt)
                 2'd0: mem_data[767:512] <= onchip_mem_read_data;
                 2'd1: mem_data[511:256] <= onchip_mem_read_data;
                 2'd2: mem_data[255:0] <= onchip_mem_read_data;
                 2'd3: mem_data <= mem_data;
+                //2'd3: mem_data <= mem_data;
                 default:mem_data <= 'h0;
             endcase // mem_rd_cnt
         end
+
     end
 end
 
@@ -130,13 +132,13 @@ always @(posedge clk) begin
                 mem_rd <= 1'b1;
                 if (onchip_mem_read_data[7:0] == 'h77) begin
                     state <= INIT_READ_ONCHIP_MEM;
-                    mem_rd <= 1'b1;
-                    mem_sel <= 1'b1;
+                    mem_rd <= 1'b0;
+                    mem_sel <= 1'b0;
                 end
                 timer_ena <= 1'b1;
             end
             INIT_READ_ONCHIP_MEM: begin
-                if (mem_rd_cnt == 2'd3) begin
+                if (mem_rd_cnt == 2'd2 && mem_rd_valid) begin
                     mem_rd <= 1'b0;
                     if (!frame_busy) begin
                         state <= HALT;
@@ -152,6 +154,10 @@ always @(posedge clk) begin
                     mem_rd <= 1'b1;
                     mem_sel <= 1'b1;
                     mem_addr <= mem_addr + 1'd1;
+                end
+                else begin
+                    mem_rd <= 1'b0;
+                    mem_sel <= 1'b0;
                 end
 
             end
