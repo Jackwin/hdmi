@@ -21,6 +21,7 @@ module fast_pat_fetch (
 
 );
 
+
 localparam  IDLE = 2'd0,
             INIT_READ_ONCHIP_MEM = 2'd1,
             READ_ONCHIP_MEM = 2'd2,

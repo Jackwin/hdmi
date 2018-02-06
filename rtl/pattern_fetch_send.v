@@ -124,14 +124,14 @@ always @(posedge ddr3_emif_clk or negedge ddr3_emif_rst_n) begin
             DDR3_IDLE: begin
                 // Read on-chip memory to determine whether the data has been loaded in DDR3
                 onchip_mem_chip_select <= 1'b1;
-                onchip_mem_read <= 1'b1;
+                onchip_mem_read <= ddr3_rd_start;
                 onchip_mem_addr <= 0;
                 onchip_mem_clken <= 1;
 
                 ddr3_rd_addr <= 'h0;
                 ddr3_rd <= 1'b0;
                 //if (ddr3_rd_start) ddr3_rd_state <= DDR3_RD_HEAD;
-                if ((onchip_mem_rddata == 256'h55) | ddr3_rd_start)
+                if ((onchip_mem_rddata == 256'h77))
 						ddr3_rd_state <= DDR3_RD_HEAD;;
             end
             DDR3_RD_HEAD: begin
