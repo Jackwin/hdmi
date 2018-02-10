@@ -20,7 +20,9 @@ module fast_wps_nios_top (
 
     output          fpga_adc_clk_p,
 // On-chip memory interface
-    output           onchip_mem_clken,
+    output          onchip_mem_clk,
+    output          onchip_mem_rstn,
+    output          onchip_mem_clken,
     output          onchip_mem_chip_select,
     output          onchip_mem_read,
     input  [255:0]  onchip_mem_rddata,
@@ -181,7 +183,8 @@ vpg vpg_inst(
     .ddr3_emif_write_data  (ddr3_emif_write_data),
     .ddr3_emif_byte_enable (ddr3_emif_byte_enable),
     .ddr3_emif_burst_count (ddr3_emif_burst_count),
-
+    .onchip_mem_clk         (onchip_mem_clk),
+    .onchip_mem_rstn        (onchip_mem_rstn),
     .onchip_mem_clken      (onchip_mem_clken),
     .onchip_mem_chip_select(onchip_mem_chip_select),
     .onchip_mem_read       (onchip_mem_read),

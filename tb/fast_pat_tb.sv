@@ -86,6 +86,8 @@ initial begin
     end
 end
 
+logic [9:0] mem_addr_r1, mem_addr_r2;
+/*
 always_ff @(posedge clk or negedge rst_n) begin : proc_rd_onchip_mem
     if(~rst_n) begin
         onchip_mem_read_data <= 0;
@@ -94,6 +96,20 @@ always_ff @(posedge clk or negedge rst_n) begin : proc_rd_onchip_mem
             onchip_mem_read_data <= onchip_mem[onchip_mem_addr[9:0]];
         end
     end
+end
+*/
+
+always_ff @(posedge clk or negedge rst_n) begin : proc_rd_mem
+    if(~rst_n) begin
+         mem_addr_r2 <= 0;
+         mem_addr_r1 <= 0;
+    end else begin
+         mem_addr_r2 <= mem_addr_r1;
+         mem_addr_r1 <= onchip_mem_addr[9:0];
+    end
+end
+always_comb begin
+    onchip_mem_read_data = onchip_mem[mem_addr_r2];
 end
 
 initial begin

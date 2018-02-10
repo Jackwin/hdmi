@@ -55,9 +55,11 @@ module pcie_dma_gen3x8 #(
     output wire [255:0]ddr3_read_data,
     output wire        ddr3_rddata_valid,
 
+    input wire          onchip_mem_clk,
+    input wire          onchip_mem_rstn,
     input wire          onchip_mem_clken,
     input wire          onchip_mem_chip_select,
-    input wire          onchip_mem_read,
+    //input wire          onchip_mem_read,
     output wire [255:0] onchip_mem_rddata,
     input wire [10:0]   onchip_mem_addr,
     input wire [31:0]   onchip_mem_byte_enable,
@@ -283,14 +285,16 @@ pcie_de_ep_dma_g3x8_integrated u0 (
     .ddr3_read_data                                         (ddr3_read_data),
     .ddr3_rddata_valid                                      (ddr3_rddata_valid),
 
-    .onchip_mem_chip_select                                      (onchip_mem_select),
-    .onchip_mem_clken                                       (onchip_mem_clken),
-    .onchip_mem_read                                        (onchip_mem_read),
-    .onchip_mem_rddata                                      (onchip_mem_rddata),
-    .onchip_mem_addr                                        (onchip_mem_addr),
-    .onchip_mem_byte_enable                                 (onchip_mem_byte_enable),
-    .onchip_mem_write                                       (onchip_mem_write),
-    .onchip_mem_write_data                                  (onchip_mem_write_data)
+    .onchip_mem_clk2_clk                                    (onchip_mem_clk),
+    .onchip_mem_reset2_reset                                (~onchip_mem_rstn),
+    .onchip_mem_s2_chipselect                                 (onchip_mem_chip_select),
+    .onchip_mem_s2_clken                                       (onchip_mem_clken),
+    //.onchip_mem_read                                        (onchip_mem_read),
+    .onchip_mem_s2_readdata                                      (onchip_mem_rddata),
+    .onchip_mem_s2_address                                        (onchip_mem_addr),
+    .onchip_mem_s2_byteenable                                 (onchip_mem_byte_enable),
+    .onchip_mem_s2_write                                       (onchip_mem_write),
+    .onchip_mem_s2_writedata                                  (onchip_mem_write_data)
 
     );
 

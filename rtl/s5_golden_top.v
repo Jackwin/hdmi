@@ -275,8 +275,11 @@ iobuf iobuf (
     .dataout(adc_clk_p),
     );
 */
+wire          fpga_adc_clk_p;
 assign adc_clk_p = fpga_adc_clk_p;
 
+wire          onchip_mem_clk;
+wire          onchip_mem_rstn;
 wire          onchip_mem_clken;
 wire          onchip_mem_chip_select;
 wire          onchip_mem_read;
@@ -301,6 +304,8 @@ wire [21:0]   ddr3_addr;
 wire [255:0]  ddr3_write_data;
 wire [31:0]   ddr3_byte_enable;
 wire [4:0]    ddr3_burst_count;
+wire          ddr3_begin_burst;
+wire [31:0]   ddr3_byte_ena;
 
 
 fast_wps_nios_top fast_wps_nios_top_i (
@@ -336,6 +341,8 @@ fast_wps_nios_top fast_wps_nios_top_i (
     .ddr3_emif_byte_enable (ddr3_byte_enable),
     .ddr3_emif_burst_count (ddr3_burst_count),
 
+    .onchip_mem_clk        (onchip_mem_clk),
+    .onchip_mem_rstn       (onchip_mem_rstn),
     .onchip_mem_clken      (onchip_mem_clken),
     .onchip_mem_chip_select(onchip_mem_chip_select),
     .onchip_mem_read       (onchip_mem_read),
@@ -445,8 +452,11 @@ pcie_dma_gen3x8 pcie_dma_gen3x8_i (
    .ddr3_ready            (ddr3_ready),
    .ddr3_read_data        (ddr3_read_data),
    .ddr3_rddata_valid     (ddr3_rddata_valid),
+   .onchip_mem_clk        (onchip_mem_clk),
+   .onchip_mem_rstn       (onchip_mem_rstn),
    .onchip_mem_clken      (onchip_mem_clken),
-   .onchip_mem_read       (onchip_mem_read),
+   .onchip_mem_chip_select(onchip_mem_chip_select),
+   //.onchip_mem_read       (onchip_mem_read),
    .onchip_mem_rddata     (onchip_mem_rddata),
    .onchip_mem_addr       (onchip_mem_addr),
    .onchip_mem_byte_enable(onchip_mem_byte_enable),

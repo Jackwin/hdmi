@@ -55,6 +55,8 @@ output [255:0]  ddr3_emif_write_data,
 output [31:0]   ddr3_emif_byte_enable,
 output [4:0]    ddr3_emif_burst_count,
 
+output          onchip_mem_clk,
+output          onchip_mem_rstn,
 output          onchip_mem_clken,
 output          onchip_mem_chip_select,
 output          onchip_mem_read,
@@ -144,6 +146,8 @@ pll_vpg pll_vpg_i (
     .locked   (vpg_pll_locked)    //  locked.export
 );
 assign vpg_locked = vpg_pll_locked;
+assign onchip_mem_clk = clk_148_5;
+assign onchip_mem_rstn = vpg_pll_locked;
 
 vga_time_generator vga_time_generator_inst(
 
@@ -204,9 +208,16 @@ pattern_gen pattern_gen_inst(
     .gen_g(gen_g),
     .gen_b(gen_b)
 );
+
+assign vpg_de     = gen_de;
+assign vpg_hs     = gen_hs;
+assign vpg_vs     = gen_vs;
+assign vpg_r     = gen_r;
+assign vpg_g     = gen_g;
+assign vpg_b     = gen_b;
 */
 // Load DMD pattern from DDR3 and gennerate HDMI standard signals
-
+/*
 pattern_fetch_send pattern_fetch_send_inst (
     .pixel_clk            (clk_148_5),
     .pixel_rst_n          (vpg_pll_locked & ~mode_change),
@@ -249,7 +260,7 @@ pattern_fetch_send pattern_fetch_send_inst (
     .gen_g                (gen_g),
     .gen_b                (gen_b)
     );
-/*
+*/
 wire           hsync_o_with_camera_format;//active high
 wire           vsync_o_with_camera_format;//active low
 wire           de_o;//active high
@@ -264,16 +275,18 @@ wire           frame_busy;
 wire           dmd_correct_15_pixles_slope;//added by wdf @2014/11/03 dmd_correct_15_pixles_slope==1'b1 the display will compensate the slope
 wire           dmd_flip_left_and_right;//flip left and right //left right flip: flip first, the correct the 15 pixels == correct the -15 pixels and then flip
 wire [10:0]    frame_count;
+
+wire          h_sync_hdmi, v_sync_hdmi, de_hdmi;
 display_vedio_generate_DMD_specific_faster display_vedio_generate_DMD_specific_faster_inst (
     .clk_i(clk_148_5),
-    .rst_ni(rst_n),
+    .rst_ni(vpg_pll_locked),
     .hsync_o_with_camera_format(hsync_o_with_camera_format),//active high
     .vsync_o_with_camera_format(vsync_o_with_camera_format),//active low
     .de_o(de_o),//active high
 
-    .hsync_o_with_hdmi_format(h_sync),
-    .vsync_o_with_hdmi_format(v_sync),
-    .de_o_with_hdmi_format(de),
+    .hsync_o_with_hdmi_format(h_sync_hdmi),
+    .vsync_o_with_hdmi_format(v_sync_hdmi),
+    .de_o_with_hdmi_format(de_hdmi),
 
     .de_o_first_offset_line(de_o_first_offset_line),
     .display_vedio_left_offset(display_vedio_left_offset),
@@ -290,32 +303,38 @@ display_vedio_generate_DMD_specific_faster display_vedio_generate_DMD_specific_f
     .frame_count(frame_count)
 );
 
+wire [23:0]   pix_data_out;
+wire          h_sync_out, v_sync_out, de_out;
 fast_pat_fetch fast_pat_fetch_inst (
     .clk                   (clk_148_5),
-    .rst_n                 (rst_n),
-    .onchip_mem_chip_select(onchip_mem_select),
-    .onchip_mem_chip_read  (onchip_mem_read),
+    .rst_n                 (vpg_pll_locked),
+    .onchip_mem_chip_select(onchip_mem_chip_select),
+    .onchip_mem_clk_ena    (onchip_mem_clken),
+    //.onchip_mem_chip_read  (onchip_mem_read),
     .onchip_mem_addr       (onchip_mem_addr),
     .onchip_mem_byte_enable(onchip_mem_byte_enable),
     .onchip_mem_write_data (onchip_mem_write_data),
     .onchip_mem_write      (onchip_mem_write),
-    .onchip_mem_read_data  (onchip_mem_read_data),
+    .onchip_mem_read_data  (onchip_mem_rd_data),
     .frame_trig            (frame_start_trig),
     .frame_busy            (frame_busy),
-    .h_sync_in             (h_sync),
-    .v_sync_in             (v_sync),
-    .de_in                 (de),
+    .h_sync_in             (h_sync_hdmi),
+    .v_sync_in             (v_sync_hdmi),
+    .de_in                 (de_hdmi),
+    .h_sync_out            (h_sync_out),
+    .v_sync_out            (v_sync_out),
+    .de_out                (de_out),
     .pix_data_out          (pix_data_out)
     );
-*/
+
 //===== output
 assign vpg_pclk = clk_148_5;
-assign vpg_de     = gen_de;
-assign vpg_hs     = gen_hs;
-assign vpg_vs     = gen_vs;
-assign vpg_r     = gen_r;
-assign vpg_g     = gen_g;
-assign vpg_b     = gen_b;
+assign vpg_de     = de_out;
+assign vpg_hs     = h_sync_out;
+assign vpg_vs     = v_sync_out;
+assign vpg_r     = pix_data_out[23:16];
+assign vpg_g     = pix_data_out[15:8];
+assign vpg_b     = pix_data_out[7:0];
 
 endmodule
 
