@@ -26,7 +26,7 @@ module fast_wps_nios_top (
     output          onchip_mem_chip_select,
     output          onchip_mem_read,
     input  [255:0]  onchip_mem_rddata,
-    output [10:0]   onchip_mem_addr,
+    output [12:0]   onchip_mem_addr,
     output [31:0]   onchip_mem_byte_enable,
     output          onchip_mem_write,
     output [255:0]  onchip_mem_write_data,
@@ -210,6 +210,7 @@ vpg vpg_inst(
 //===== source selection, from pattern generator or hdmi-rx
 
 assign hdmi_tx_pclk = ~vpg_pclk;
+//assign vpg_rst_n = vpg_locked;
 source_selector source_selector_inst(
                                                  .data0x({vpg_de, vpg_hs, vpg_vs, vpg_r, 4'b0000, vpg_g, 4'b0000, vpg_b, 4'b0000}),
                                                  .data1x({1'b1, 1'b1, 1'b1,,,}),

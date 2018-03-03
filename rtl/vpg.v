@@ -61,7 +61,7 @@ output          onchip_mem_clken,
 output          onchip_mem_chip_select,
 output          onchip_mem_read,
 input [255:0]   onchip_mem_rddata,
-output [10:0]   onchip_mem_addr,
+output [12:0]   onchip_mem_addr,
 output [31:0]   onchip_mem_byte_enable,
 output          onchip_mem_write,
 output [255:0]  onchip_mem_write_data,
@@ -208,7 +208,7 @@ pattern_gen pattern_gen_inst(
     .gen_g(gen_g),
     .gen_b(gen_b)
 );
-
+assign vpg_pclk = clk_148_5;
 assign vpg_de     = gen_de;
 assign vpg_hs     = gen_hs;
 assign vpg_vs     = gen_vs;
@@ -261,6 +261,7 @@ pattern_fetch_send pattern_fetch_send_inst (
     .gen_b                (gen_b)
     );
 */
+
 wire           hsync_o_with_camera_format;//active high
 wire           vsync_o_with_camera_format;//active low
 wire           de_o;//active high
@@ -315,9 +316,12 @@ fast_pat_fetch fast_pat_fetch_inst (
     .onchip_mem_byte_enable(onchip_mem_byte_enable),
     .onchip_mem_write_data (onchip_mem_write_data),
     .onchip_mem_write      (onchip_mem_write),
-    .onchip_mem_read_data  (onchip_mem_rd_data),
+    .onchip_mem_read_data  (onchip_mem_rddata),
+    .start                 (start),
     .frame_trig            (frame_start_trig),
     .frame_busy            (frame_busy),
+    .de_first_offset_line_in     (de_o_first_offset_line),
+    .display_video_left_offset_in(display_vedio_left_offset),
     .h_sync_in             (h_sync_hdmi),
     .v_sync_in             (v_sync_hdmi),
     .de_in                 (de_hdmi),

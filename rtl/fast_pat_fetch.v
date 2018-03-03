@@ -12,12 +12,14 @@ module fast_pat_fetch (
     output          onchip_mem_write,
 
     input [255:0]   onchip_mem_read_data,
-
+    input           start,
     output reg      frame_trig,
     input           frame_busy,
     input           h_sync_in,
     input           v_sync_in,
     input           de_in,
+    input           de_first_offset_line_in,
+    input [23:0]    display_video_left_offset_in,
     output reg      h_sync_out,
     output reg      v_sync_out,
     output reg      de_out,
@@ -107,7 +109,7 @@ always @(posedge clk) begin
 
         // capturing the falling edge of de_in
         de_r <= de_in;
-        de_p <= ~de_in & de_r;
+        de_p <= ~de_r & de_in;
     end
 end
 
@@ -118,8 +120,9 @@ always @(posedge clk) begin
         if (v_sync_p) begin
             line_cnt <= 'h0;
         end
-        else if (h_sync_p) begin
+        else if (de_p) begin
             line_cnt <= line_cnt + 1'd1;
+            $display("line_cnt is %d",line_cnt);
         end
     end
 end
@@ -143,7 +146,6 @@ always @(posedge clk) begin
         mem_clken <= 1'b0;
     end else begin
         mem_rd <= 1'b0;
-        mem_sel <= 1'b0;
         mem_wr <= 1'b0;
         mem_wr_byte_ena <= 'h0;
         mem_clken <= 1'b1;
@@ -152,7 +154,7 @@ always @(posedge clk) begin
             IDLE_s: begin
                 mem_sel <= 1'b1;
                 mem_rd <= 1'b0;
-                if (onchip_mem_read_data[7:0] == 'h77) begin
+                if ((onchip_mem_read_data[31:0] == 32'hfdfdfdfd) || start) begin
                     state <= INIT_READ_ONCHIP_MEM_s;
                     mem_rd <= 1'b1;
                     mem_sel <= 1'b1;
@@ -178,19 +180,30 @@ always @(posedge clk) begin
                     mem_rd <= 1'b1;
                     mem_sel <= 1'b1;
                     mem_addr <= mem_addr + 1'd1;
+                    $display("mem_addr is %d",mem_addr);
                 end
                 else begin
                     mem_rd <= 1'b0;
-                    mem_sel <= 1'b0;
                 end
-
             end
             SEND_DATA_s: begin
                 frame_trig <= 1'b0;
-                if (de_in) begin
+                if (de_in & de_first_offset_line_in) begin
+                    pix_data_out <= display_video_left_offset_in;
+                end
+                else if (de_in) begin
                     pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
-                    if (pix_cnt_per_de < 7'd79) begin
+
+                    if (pix_cnt_per_de < 7'd80) begin
                         cnt <= cnt + 1'd1;
+                        /*
+                        if (line_cnt[7]) begin
+                            pix_data_out <= 24'hffffff;
+                        end
+                        else begin
+                            pix_data_out <= 24'h000000;
+                        end
+                        */
                         case(cnt)
                             5'd0: pix_data_out <= mem_data[767: (767 - 24 * 1 + 1)];
                             5'd1: pix_data_out <= mem_data[(767 - 24 * 1) : (767 - 24 * 2 + 1)];
@@ -226,6 +239,7 @@ always @(posedge clk) begin
                             5'd31: pix_data_out <= mem_data[(767 - 24 * 31) : 0];
                             default: pix_data_out <= 'h0;
                         endcase // cnt
+
                     end
                     else begin
                         cnt <= cnt;
@@ -236,10 +250,11 @@ always @(posedge clk) begin
                     pix_cnt_per_de <= 'h0;
                 end
 
-                if (cnt == 5'd27 || cnt == 5'd29 || cnt == 5'd31) begin
+                if ((cnt == 5'd27 || cnt == 5'd29 || cnt == 5'd31) & de_in) begin
                     mem_rd <= 1'd1;
                     mem_sel <= 1'b1;
                     mem_addr <= mem_addr + 1'd1;
+                    $display("mem_addr is %d",mem_addr);
                 end
                 else begin
                     mem_rd <= 1'd0;
@@ -262,8 +277,11 @@ always @(posedge clk) begin
                 mem_wr <= 1'b1;  // Clear the data in Addr 0x00 of onchip memory to prepare for next opearation
                 mem_addr <= 'h0;
                 mem_wr_data <= 'h0;
+                mem_sel <= 1'b1;
                 state <= IDLE_s;
                 mem_wr_byte_ena <= 32'hffffffff;
+			    mem_rd_cnt <= 'h0;
+                cnt <= 'h0;
             end
             default: begin
                 state <= IDLE_s;

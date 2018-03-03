@@ -53,7 +53,7 @@ logic [0:1023][255:0]   onchip_mem;
 
 logic           onchip_mem_select;
 logic           onchip_mem_read;
-logic [10:0]    onchip_mem_addr;
+logic [12:0]    onchip_mem_addr;
 logic [31:0]    onchip_mem_byte_enable;
 logic [255:0]   onchip_mem_write_data;
 logic           onchip_mem_write;
@@ -73,6 +73,8 @@ fast_pat_fetch fast_pat_fetch_inst (
     .onchip_mem_read_data  (onchip_mem_read_data),
     .frame_trig            (frame_start_trig),
     .frame_busy            (frame_busy),
+    .de_first_offset_line_in(de_o_first_offset_line),
+    .display_video_left_offset_in(display_vedio_left_offset),
     .h_sync_in             (h_sync),
     .v_sync_in             (v_sync),
     .de_in                 (de),
@@ -80,7 +82,7 @@ fast_pat_fetch fast_pat_fetch_inst (
     );
 
 initial begin
-    onchip_mem[0] = 256'h000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e77;
+    onchip_mem[0] = 256'h000102030405060708090a0b0c0d0e0f000102030405060708090a0bfdfdfdfd;
     for (int i = 1; i < 1024; i++) begin
         onchip_mem[i] = onchip_mem[i-1] + 256'h1010101010101010101010101010101010101010101010101010101010101010;
     end

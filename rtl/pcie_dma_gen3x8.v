@@ -61,7 +61,7 @@ module pcie_dma_gen3x8 #(
     input wire          onchip_mem_chip_select,
     //input wire          onchip_mem_read,
     output wire [255:0] onchip_mem_rddata,
-    input wire [10:0]   onchip_mem_addr,
+    input wire [12:0]   onchip_mem_addr,
     input wire [31:0]   onchip_mem_byte_enable,
     input wire          onchip_mem_write,
     input wire [255:0]  onchip_mem_write_data

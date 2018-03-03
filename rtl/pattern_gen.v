@@ -110,11 +110,14 @@ begin
 				(pixel_y == 0) || ((pixel_y+1) == image_height))  // border
 				{gen_r, gen_g, gen_b} <= {8'hFF,8'hFF,8'hFF};
 			else if (pixel_y < v_group0)  // red scale
-				{gen_r, gen_g, gen_b} <= {h_scale, 8'h00, 8'h00};
+				//{gen_r, gen_g, gen_b} <= {h_scale, 8'h00, 8'h00};
+				{gen_r, gen_g, gen_b} <= {h_scale, h_scale, h_scale};
 			else if (pixel_y < v_group1) // green scale
-				{gen_r, gen_g, gen_b} <= {8'h00, h_scale, 8'h00};
+				//{gen_r, gen_g, gen_b} <= {8'h00, h_scale, 8'h00};
+				{gen_r, gen_g, gen_b} <= {h_scale, h_scale, h_scale};
 			else if (pixel_y < v_group2)  // blue scale
-				{gen_r, gen_g, gen_b} <= {8'h00, 8'h00, h_scale};
+				//{gen_r, gen_g, gen_b} <= {8'h00, 8'h00, h_scale};
+				{gen_r, gen_g, gen_b} <= {h_scale, h_scale, h_scale};
 			else	// gray scale
 				{gen_r, gen_g, gen_b} <= {h_scale, h_scale, h_scale};
 		end			

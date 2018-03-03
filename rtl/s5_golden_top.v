@@ -284,7 +284,7 @@ wire          onchip_mem_clken;
 wire          onchip_mem_chip_select;
 wire          onchip_mem_read;
 wire [255:0]  onchip_mem_rddata;
-wire [10:0]   onchip_mem_addr;
+wire [12:0]   onchip_mem_addr;
 wire [31:0]   onchip_mem_byte_enable;
 wire          onchip_mem_write;
 wire [255:0]  onchip_mem_write_data;
@@ -477,7 +477,7 @@ altsource_probe #(
 );
 
 
-always @(posedge ddr3_clk or negedge ddr3_rst_n) begin
+always @(posedge hdmi_tx_pclk or negedge ddr3_rst_n) begin
     if(~ddr3_rst_n) begin
         start_r <= 0;
         start <= 0;
@@ -487,6 +487,16 @@ always @(posedge ddr3_clk or negedge ddr3_rst_n) begin
     end
 end
 
+/*
+timer #(.MAX(32'h2d7bc00))
+timer_inst(
+    .clk      (hdmi_tx_pclk),
+    .rst_n    (1'b1),
+    .timer_ena(1'b1),
+    .timer_rst(1'b0),
+    .timer_out(start)
+
+    );
 /*
 // Generate data for DDR testing
 

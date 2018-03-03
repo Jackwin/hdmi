@@ -12,7 +12,7 @@ module timer # (
 
 );
 
-reg [9:0]       timer_cnt;
+reg [31:0]       timer_cnt;
 
 always @(posedge clk) begin
     if(~rst_n || timer_rst) begin
