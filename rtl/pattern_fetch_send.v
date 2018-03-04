@@ -8,6 +8,9 @@ module pattern_fetch_send (
     input           pixel_de,
     input           pixel_hs,
     input           pixel_vs,
+    input           de_first_offset_line_in,
+    input [23:0]    display_video_left_offset_in,
+
     input [11:0]    image_width,
     input [11:0]    image_height,
     input [1:0]     image_color,
@@ -367,20 +370,94 @@ wire        msb_pat_data;
 reg [7:0]   vpg_r, vpg_g, vpg_b;
  // Count the pixel in every de, and set 81st and 82nd pixel to be '0'
 reg [6:0]   pix_cnt_per_de;
-
+wire        h_fill_true;
+wire        v_file_true;
+reg [5:0]   v_fill_cnt;
+reg         de_first_offset_line_r, de_first_offset_line_p;
+reg         de_r, de_p;
+assign      h_fill_true = |h_fill_size;
+assign      v_fill_true = |v_fill_size;
 
 // Generate every pixel output
 assign msb_pat_data = h_shift_valid ? fifo_rd_data[255 - shift_cnt] : 1'b0;
+
+
+always @(posedge pixel_clk or negedge pixel_rst_n) begin
+    if(~pixel_rst_n) begin
+        de_first_offset_line_r <= 0;
+        de_first_offset_line_p <= 0;
+        de_r <= 0;
+        de_p <= 0;
+    end else begin
+        de_first_offset_line_r <= de_first_offset_line_in;
+        de_first_offset_line_p <= ~de_first_offset_line_r & de_first_offset_line_in;
+        de_r <= pixel_de;
+        de_p <= ~de_r & pixel_de;
+    end
+end
 
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
          shift_cnt <= 0;
          h_fill_cnt <= 0;
+         v_fill_cnt <= 0;
          pix_cnt_per_de <= 0;
          h_shift_valid <= 0;
     end else begin
         // When gen_de is '1', the pixel data should be ready and start to send pixel data
         // No need to fill the pixel
+        if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de) begin
+                pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
+            end
+            else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de) begin
+                pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
+            end
+            else begin
+                pix_cnt_per_de <= 'h0;
+            end
+        end
+
+        // Initiate v_fill_cnt at the beginning of every picture
+        if (de_first_offset_line_p) begin
+            v_fill_cnt <= 0;
+        end
+
+        case ({h_fill_true, v_fill_true})
+            2'b00: begin
+                if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
+                    shift_cnt <= shift_cnt + 1'd1;
+                    h_shift_valid <= 1;
+                end
+                else begin
+                    h_shift_valid <= 0; // Indicate the shift_cnt is not valid
+                end
+            end
+            2'b01: begin
+                if (v_fill_cnt == 'h0) begin
+                    if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
+                        shift_cnt <= shift_cnt + 1'd1;
+                        h_shift_valid <= 1;
+                    end
+                end
+                else begin
+                    h_shift_valid <= 1'b0;
+                    if (pix_cnt_per_de == 7'd81) begin
+                        if (v_fill_cnt == (v_fill_size - 1'd1)) begin
+                            v_fill_cnt <= 'h0;
+                        end
+                        else begin
+                         v_fill_cnt <= v_fill_cnt + 1'd1;
+                        end
+                    end
+                end
+                else begin
+                    h_shift_valid <= 1'b0; // Indicate the shift_cnt is not valid
+                end
+            end
+
+
+
+
         if (h_fill_size == 'h0) begin
             if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de) begin
                pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
@@ -401,7 +478,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
             end
 
         end
-        else begin
+        else begin // horizontal pixel filling
             if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de) begin
                 pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
             end
@@ -431,27 +508,73 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                 h_shift_valid <= 0; // Indicate the shift_cnt is not valid
             end
         end
+
+
     end
 end
 
 //-----------------------------------
-//Cache every line pixel output for the filling in the vertial direction
-wire [31:0]         line_pix_cache_fifo_din;
-wire [31:0]         line_pix_cache_fifo_dout;
-reg                line_pix_cache_fifo_wr;
-reg                line_pix_cache_fifo_rd;
+//Cache every line pixel output for the vertial filling
+wire [31:0]         line_pix_cache_din;
+wire [31:0]         line_pix_cache_dout;
+wire [7:0]          line_pix_cache_wr_addr;
+wire [7:0]          line_pix_cache_rd_addr;
 
-always @(posedge pixel_clk or negedge pixel_rst_n) begin : proc_
+reg                 line_pix_cache_wr;
+
+always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
-         line_pix_cache_fifo_wr <= 0;
-         line_pix_cache_fifo_rd <= 0;
+         line_pix_cache_wr <= 1'b0;
+         line_pix_cache_din <= 'h0;
     end else begin
-         if (h_shift_valid && shift_cnt == 7'd31) begin
-            line_pix_cache_fifo_din <= fifo_rd_data[255:224];
+
+        if (h_shift_valid && shift_cnt == 7'd31) begin
+            line_pix_cache_din <= fifo_rd_data[255:224];
+            line_pix_cache_wr <= 1'b1;
+        end
+        else if (h_shift_valid && shift_cnt == 7'd63) begin
+            line_pix_cache_din <= fifo_rd_data[223:192];
+            line_pix_cache_wr <= 1'b1;
+        end
+        else if (h_shift_valid && shift_cnt == 7'd95) begin
+            line_pix_cache_din <= fifo_rd_data[191:160];
+            line_pix_cache_wr <= 1'b1;
+        end
+        else if (h_shift_valid && shift_cnt == 7'd127) begin
+            line_pix_cache_din <= fifo_rd_data[159:128];
+            line_pix_cache_wr <= 1'b1;
+        end
+        else if (h_shift_valid && shift_cnt == 7'd159) begin
+            line_pix_cache_din <= fifo_rd_data[127:96];
+            line_pix_cache_wr <= 1'b1;
+        end
+        else if (h_shift_valid && shift_cnt == 7'd191) begin
+            line_pix_cache_din <= fifo_rd_data[95:64];
+            line_pix_cache_wr <= 1'b1;
+        end
+        else if (h_shift_valid && shift_cnt == 7'd223) begin
+            line_pix_cache_din <= fifo_rd_data[63:32];
+            line_pix_cache_wr <= 1'b1;
+        end
+        else if (h_shift_valid && shift_cnt == 7'd255) begin
+            line_pix_cache_din <= fifo_rd_data[31:0];
+            line_pix_cache_wr <= 1'b1;
+        end
+        else begin
+            line_pix_cache_wr <= 1'b0;
+        end
             //TODO
     end
 end
 
+line_pix_cache dpram_32inx64 (
+    .clock(pixel_clk),
+    .data(line_pix_cache_din),
+    .rdaddress(line_pix_cache_rd_addr),
+    .wraddress(line_pix_cache_wr_addr),
+    .wren(line_pix_cache_wr),
+    .q(line_pix_cache_dout)
+);
 
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
