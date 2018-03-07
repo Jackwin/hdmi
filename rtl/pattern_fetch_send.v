@@ -82,6 +82,7 @@ wire        fifo_rd_ena/*synthesis keep*/;
 wire [255:0]fifo_wr_data, fifo_rd_data/*synthesis keep*/;
 
 
+
 assign ddr3_rddata = ddr3_emif_read_data;
 assign ddr3_rddata_valid = ddr3_emif_rddata_valid;
 assign ddr3_emif_read = ddr3_rd;
@@ -138,9 +139,9 @@ always @(posedge ddr3_emif_clk or negedge ddr3_emif_rst_n) begin
                         onchip_mem_addr <= 2;
                     end
 
-                //if (ddr3_rd_start) ddr3_rd_state <= DDR3_RD_HEAD;
-                if ((onchip_mem_rddata == 256'h77))
-                        ddr3_rd_state <= DDR3_RD_HEAD;;
+                if (ddr3_rd_start) ddr3_rd_state <= DDR3_RD_HEAD;
+                //if ((onchip_mem_rddata == 256'h77))
+                //        ddr3_rd_state <= DDR3_RD_HEAD;;
             end
             DDR3_RD_HEAD: begin
                 if (!fifo_full && ddr3_emif_ready) begin
@@ -229,12 +230,24 @@ reg         last_pat_flag;
 // Fill the same pixel in the horizonal direction to meet 1920
 reg [7:0]   h_fill_cnt;
 reg [7:0]   per_pat_tail_pixel_num;
-
+//
 
 // Pattern signals
 reg [31:0]  pat_h_pix, pat_v_pix, pat_total_pix;
 reg [31:0]  pat_num, h_fill_size, v_fill_size;
 reg [31:0]  pat_start_addr, pat_end_addr;
+
+//---------------------------------------------------------
+// Output signals
+
+reg [7:0]   shift_cnt;
+//Cache every line pixel output for the vertial filling
+reg [31:0]         line_pix_cache_din;
+wire [31:0]         line_pix_cache_dout;
+reg [7:0]          line_pix_cache_wr_addr;
+reg [7:0]          line_pix_cache_rd_addr;
+reg                 line_pix_cache_wr;
+
 
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
@@ -265,7 +278,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
             PAT_TX_HEAD_WAIT: begin
               //  fifo_rd_ena <= 1'b0;
                 //pat_ready_out <= 1'b1;
-                {pat_h_pix, pat_v_pix, pat_total_pix, pat_num, h_fill_size, pat_start_addr, pat_end_addr, pat_rsv} <= fifo_rd_data;
+                {pat_h_pix, pat_v_pix, pat_total_pix, pat_num, h_fill_size, v_fill_size, pat_start_addr, pat_end_addr} <= fifo_rd_data;
                 pat_tx_state <= PAT_TX_BODY;
             end
             PAT_TX_BODY: begin // Read a whole 256-bit data, named as body
@@ -364,8 +377,8 @@ assign fifo_rd_ena = (pat_tx_state == PAT_TX_HEAD | pat_tx_state == PAT_TX_BODY
                         && h_fill_cnt == (h_fill_size - 2'd2) && h_fill_size!= 0))
                     |(pat_tx_state == PAT_TX_TAIL_WAIT && shift_cnt == (per_pat_tail_pixel_num - 2'd2) && h_fill_size == 'd0);
 
-reg [7:0]   shift_cnt;
-reg         h_shift_valid;
+
+reg         v_fill_flag;
 wire        msb_pat_data;
 reg [7:0]   vpg_r, vpg_g, vpg_b;
  // Count the pixel in every de, and set 81st and 82nd pixel to be '0'
@@ -379,7 +392,7 @@ assign      h_fill_true = |h_fill_size;
 assign      v_fill_true = |v_fill_size;
 
 // Generate every pixel output
-assign msb_pat_data = h_shift_valid ? fifo_rd_data[255 - shift_cnt] : 1'b0;
+assign msb_pat_data = (v_fill_flag == 'd0) ? fifo_rd_data[255 - shift_cnt] : line_pix_cache_dout[32 - shift_cnt[4:0]];
 
 
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
@@ -396,26 +409,31 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
     end
 end
 
+// Count the pixel number in every de
+always @(posedge pixel_clk or negedge pixel_rst_n) begin : proc_
+    if(~pixel_rst_n) begin
+        pix_cnt_per_de <= 0;
+    end else begin
+        if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de) begin
+            pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
+        end
+        else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de) begin
+            pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
+        end
+        else begin
+            pix_cnt_per_de <= 'h0;
+        end
+    end
+end
+
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
          shift_cnt <= 0;
          h_fill_cnt <= 0;
          v_fill_cnt <= 0;
-         pix_cnt_per_de <= 0;
-         h_shift_valid <= 0;
+         v_fill_flag <= 0;
     end else begin
         // When gen_de is '1', the pixel data should be ready and start to send pixel data
-        // No need to fill the pixel
-        if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de) begin
-                pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
-            end
-            else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de) begin
-                pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
-            end
-            else begin
-                pix_cnt_per_de <= 'h0;
-            end
-        end
 
         // Initiate v_fill_cnt at the beginning of every picture
         if (de_first_offset_line_p) begin
@@ -426,21 +444,25 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
             2'b00: begin
                 if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                     shift_cnt <= shift_cnt + 1'd1;
-                    h_shift_valid <= 1;
-                end
-                else begin
-                    h_shift_valid <= 0; // Indicate the shift_cnt is not valid
+                    v_fill_flag <= 0;
                 end
             end
-            2'b01: begin
+            2'b01: begin // Only verital filling
                 if (v_fill_cnt == 'h0) begin
                     if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                         shift_cnt <= shift_cnt + 1'd1;
-                        h_shift_valid <= 1;
+                    end
+
+                    if(pix_cnt_per_de == 7'd81) begin
+                        v_fill_cnt <= v_fill_cnt + 1'd1;
                     end
                 end
                 else begin
-                    h_shift_valid <= 1'b0;
+                    if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
+                        shift_cnt <= shift_cnt + 1'd1;
+                        v_fill_flag <= 1;
+                    end
+                    v_fill_flag <= 1'b0;
                     if (pix_cnt_per_de == 7'd81) begin
                         if (v_fill_cnt == (v_fill_size - 1'd1)) begin
                             v_fill_cnt <= 'h0;
@@ -450,115 +472,121 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                         end
                     end
                 end
+            end
+            2'b10: begin // Only horizontal filling
+                if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
+                    h_fill_cnt <= h_fill_cnt + 1'd1;
+                    v_fill_flag <= 0;
+                    if (h_fill_cnt == (h_fill_size - 1)) begin // Shift out the new bit from fifo_rd_data
+                        shift_cnt <= shift_cnt + 1'd1;
+                        h_fill_cnt <= 'h0;
+                    end
+                end
+                else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
+                    h_fill_cnt <= h_fill_cnt + 1'd1;
+                    v_fill_flag <= 0;
+                    if (shift_cnt != (per_pat_tail_pixel_num - 1) && h_fill_cnt == (h_fill_size - 1)) begin
+                        shift_cnt <= shift_cnt + 1'd1;
+                        h_fill_cnt <= 'h0;
+                    end
+                end
                 else begin
-                    h_shift_valid <= 1'b0; // Indicate the shift_cnt is not valid
+                    v_fill_flag <= 0; // Indicate the shift_cnt is not valid
                 end
             end
 
+            2'b11: begin
 
+                if (v_fill_cnt == 'h0) begin
+                    if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
+                        h_fill_cnt <= h_fill_cnt + 1'd1;
+                        v_fill_flag <= 0;
+                        if (h_fill_cnt == (h_fill_size - 1)) begin // Shift out the new bit from fifo_rd_data
+                            shift_cnt <= shift_cnt + 1'd1;
+                            h_fill_cnt <= 'h0;
+                        end
+                    end
+                    else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
+                        h_fill_cnt <= h_fill_cnt + 1'd1;
+                        v_fill_flag <= 0;
+                        if (shift_cnt != (per_pat_tail_pixel_num - 1) && h_fill_cnt == (h_fill_size - 1)) begin
+                            shift_cnt <= shift_cnt + 1'd1;
+                            h_fill_cnt <= 'h0;
+                        end
+                    end
+                    else begin
+                        v_fill_flag <= 0; // Indicate the shift_cnt is not valid
+                    end
 
-
-        if (h_fill_size == 'h0) begin
-            if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de) begin
-               pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
-           end
-           else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de) begin
-                 pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
-            end
-            else begin
-                 pix_cnt_per_de <= 'h0;
-            end
-
-            if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
-                shift_cnt <= shift_cnt + 1'd1;
-                h_shift_valid <= 1;
-            end
-            else begin
-                h_shift_valid <= 0; // Indicate the shift_cnt is not valid
-            end
-
-        end
-        else begin // horizontal pixel filling
-            if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de) begin
-                pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
-            end
-            else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de) begin
-               pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
-            end
-            else begin
-                pix_cnt_per_de <= 0;
-            end
-
-            if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
-                h_fill_cnt <= h_fill_cnt + 1'd1;
-                 h_shift_valid <= 1;
-                if (h_fill_cnt == (h_fill_size - 1)) begin // Shift out the new bit from fifo_rd_data
-                    shift_cnt <= shift_cnt + 1'd1;
-                    h_fill_cnt <= 'h0;
+                    if(pix_cnt_per_de == 7'd81) begin
+                        v_fill_cnt <= v_fill_cnt + 1'd1;
+                    end
+                end
+                else begin
+                    v_fill_flag <= 1'b0;
+                    if (pix_cnt_per_de == 7'd81) begin
+                        if (v_fill_cnt == (v_fill_size - 1'd1)) begin
+                            v_fill_cnt <= 'h0;
+                        end
+                        else begin
+                         v_fill_cnt <= v_fill_cnt + 1'd1;
+                        end
+                    end
                 end
             end
-            else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
-                h_fill_cnt <= h_fill_cnt + 1'd1;
-                 h_shift_valid <= 1;
-                if (shift_cnt != (per_pat_tail_pixel_num - 1) && h_fill_cnt == (h_fill_size - 1)) begin
-                    shift_cnt <= shift_cnt + 1'd1;
-                    h_fill_cnt <= 'h0;
-                end
-            else begin
-                h_shift_valid <= 0; // Indicate the shift_cnt is not valid
-            end
-        end
 
-
+        endcase
     end
 end
 
 //-----------------------------------
-//Cache every line pixel output for the vertial filling
-wire [31:0]         line_pix_cache_din;
-wire [31:0]         line_pix_cache_dout;
-wire [7:0]          line_pix_cache_wr_addr;
-wire [7:0]          line_pix_cache_rd_addr;
-
-reg                 line_pix_cache_wr;
 
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
          line_pix_cache_wr <= 1'b0;
          line_pix_cache_din <= 'h0;
+         line_pix_cache_wr_addr <= 'h0;
     end else begin
 
-        if (h_shift_valid && shift_cnt == 7'd31) begin
+        if (v_fill_flag && shift_cnt == 7'd31) begin
             line_pix_cache_din <= fifo_rd_data[255:224];
             line_pix_cache_wr <= 1'b1;
+            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
         end
-        else if (h_shift_valid && shift_cnt == 7'd63) begin
+        else if (v_fill_flag && shift_cnt == 7'd63) begin
             line_pix_cache_din <= fifo_rd_data[223:192];
             line_pix_cache_wr <= 1'b1;
+            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
         end
-        else if (h_shift_valid && shift_cnt == 7'd95) begin
+        else if (v_fill_flag && shift_cnt == 7'd95) begin
             line_pix_cache_din <= fifo_rd_data[191:160];
             line_pix_cache_wr <= 1'b1;
+            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
         end
-        else if (h_shift_valid && shift_cnt == 7'd127) begin
+        else if (v_fill_flag && shift_cnt == 7'd127) begin
             line_pix_cache_din <= fifo_rd_data[159:128];
             line_pix_cache_wr <= 1'b1;
+            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
         end
-        else if (h_shift_valid && shift_cnt == 7'd159) begin
+        else if (v_fill_flag && shift_cnt == 7'd159) begin
             line_pix_cache_din <= fifo_rd_data[127:96];
             line_pix_cache_wr <= 1'b1;
+            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
         end
-        else if (h_shift_valid && shift_cnt == 7'd191) begin
+        else if (v_fill_flag && shift_cnt == 7'd191) begin
             line_pix_cache_din <= fifo_rd_data[95:64];
             line_pix_cache_wr <= 1'b1;
+            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
         end
-        else if (h_shift_valid && shift_cnt == 7'd223) begin
+        else if (v_fill_flag && shift_cnt == 7'd223) begin
             line_pix_cache_din <= fifo_rd_data[63:32];
             line_pix_cache_wr <= 1'b1;
+            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
         end
-        else if (h_shift_valid && shift_cnt == 7'd255) begin
+        else if (v_fill_flag && shift_cnt == 7'd255) begin
             line_pix_cache_din <= fifo_rd_data[31:0];
             line_pix_cache_wr <= 1'b1;
+            line_pix_cache_wr_addr <= 'h0;
         end
         else begin
             line_pix_cache_wr <= 1'b0;
@@ -567,7 +595,21 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
     end
 end
 
-line_pix_cache dpram_32inx64 (
+// Increase cache read address
+always @(posedge pixel_clk or negedge pixel_rst_n) begin
+    if(~pixel_rst_n) begin
+        line_pix_cache_rd_addr <= 0;
+    end else begin
+        if (shift_cnt[4:0] == 5'd30) begin
+                line_pix_cache_rd_addr <= 'h0;
+        end
+        else begin
+            line_pix_cache_rd_addr <= line_pix_cache_rd_addr + 1'd1;
+        end
+    end
+end
+
+ dpram_32inx64 line_pix_cache(
     .clock(pixel_clk),
     .data(line_pix_cache_din),
     .rdaddress(line_pix_cache_rd_addr),
@@ -575,6 +617,7 @@ line_pix_cache dpram_32inx64 (
     .wren(line_pix_cache_wr),
     .q(line_pix_cache_dout)
 );
+
 
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
