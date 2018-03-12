@@ -240,13 +240,15 @@ reg [31:0]  pat_start_addr, pat_end_addr;
 //---------------------------------------------------------
 // Output signals
 
-reg [7:0]   shift_cnt;
+reg [7:0]   shift_cnt, shift_cnt_r;
 //Cache every line pixel output for the vertial filling
-reg [31:0]         line_pix_cache_din;
-wire [31:0]         line_pix_cache_dout;
-reg [7:0]          line_pix_cache_wr_addr;
-reg [7:0]          line_pix_cache_rd_addr;
+reg [15:0]         line_pix_cache_din;
+wire [15:0]         line_pix_cache_dout;
+reg [3:0]          line_pix_cache_wr_addr;
+reg [3:0]           line_pix_cache_rd_addr;
+reg [3:0]           line_pix_cache_rd_addr_r1, line_pix_cache_rd_addr_r2;
 reg                 line_pix_cache_wr;
+reg [79:0]          line_pix_cache_80bit;
 
 
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
@@ -380,32 +382,48 @@ assign fifo_rd_ena = (pat_tx_state == PAT_TX_HEAD | pat_tx_state == PAT_TX_BODY
 
 reg         v_fill_flag;
 wire        msb_pat_data;
+reg         msb_pat_data_r;
 reg [7:0]   vpg_r, vpg_g, vpg_b;
  // Count the pixel in every de, and set 81st and 82nd pixel to be '0'
-reg [6:0]   pix_cnt_per_de;
+reg [6:0]   pix_cnt_per_de, pix_cnt_per_de_r;
 wire        h_fill_true;
 wire        v_file_true;
 reg [5:0]   v_fill_cnt;
 reg         de_first_offset_line_r, de_first_offset_line_p;
-reg         de_r, de_p;
+reg         pixel_de_r, pixel_de_p;
+// The actual 80-pixel valid flag
+reg         pixel80_valid;
+// output pixel counter
+reg [7:0]   pixel_out_cnt;
+reg [15:0]  shift_reg;
+
 assign      h_fill_true = |h_fill_size;
 assign      v_fill_true = |v_fill_size;
 
 // Generate every pixel output
-assign msb_pat_data = (v_fill_flag == 'd0) ? fifo_rd_data[255 - shift_cnt] : line_pix_cache_dout[32 - shift_cnt[4:0]];
+// Keep the 81st and 82nd pixel value as 80th
+assign msb_pat_data = (v_fill_flag == 'd0) ? fifo_rd_data[255 - shift_cnt] :
+                                             (pixel80_valid ? line_pix_cache_80bit[79 - pixel_out_cnt] : 1'b0);
 
-
+always @(posedge pixel_clk or negedge pixel_rst_n) begin : proc_msb_r
+    if(~pixel_rst_n) begin
+        msb_pat_data_r <= 0;
+    end else begin
+        msb_pat_data_r <= msb_pat_data;
+    end
+end
+//--------------------------------------------------------
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
         de_first_offset_line_r <= 0;
         de_first_offset_line_p <= 0;
-        de_r <= 0;
-        de_p <= 0;
+        pixel_de_r <= 0;
+        pixel_de_p <= 0;
     end else begin
         de_first_offset_line_r <= de_first_offset_line_in;
         de_first_offset_line_p <= ~de_first_offset_line_r & de_first_offset_line_in;
-        de_r <= pixel_de;
-        de_p <= ~de_r & pixel_de;
+        pixel_de_r <= pixel_de;
+        pixel_de_p <= ~pixel_de_r & pixel_de;
     end
 end
 
@@ -413,7 +431,11 @@ end
 always @(posedge pixel_clk or negedge pixel_rst_n) begin : proc_
     if(~pixel_rst_n) begin
         pix_cnt_per_de <= 0;
+        pix_cnt_per_de_r <= 0;
     end else begin
+        // Buffer pix_cnt_per_de to aligh with pixel_de_r
+        pix_cnt_per_de_r <= pix_cnt_per_de;
+
         if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de) begin
             pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
         end
@@ -426,13 +448,28 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin : proc_
     end
 end
 
+
+/*
+wire [31:0] taps;
+
+shift_reg shift_reg_inst (
+    .clock (pixel_clk),
+    .aclr(~pixel_rst_n),
+    .shiftin(msb_pat_data_r),
+    .shiftout(),
+    .taps(taps)
+    );
+*/
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
          shift_cnt <= 0;
+         shift_cnt_r <= 0;
          h_fill_cnt <= 0;
          v_fill_cnt <= 0;
          v_fill_flag <= 0;
     end else begin
+
+        shift_cnt_r <= shift_cnt;
         // When gen_de is '1', the pixel data should be ready and start to send pixel data
 
         // Initiate v_fill_cnt at the beginning of every picture
@@ -449,6 +486,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
             end
             2'b01: begin // Only verital filling
                 if (v_fill_cnt == 'h0) begin
+                    v_fill_flag <= 0;
                     if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                         shift_cnt <= shift_cnt + 1'd1;
                     end
@@ -458,11 +496,12 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                     end
                 end
                 else begin
+                    v_fill_flag <= 1'b1;
                     if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                         shift_cnt <= shift_cnt + 1'd1;
-                        v_fill_flag <= 1;
+                        //v_fill_flag <= 1;
                     end
-                    v_fill_flag <= 1'b0;
+
                     if (pix_cnt_per_de == 7'd81) begin
                         if (v_fill_cnt == (v_fill_size - 1'd1)) begin
                             v_fill_cnt <= 'h0;
@@ -498,9 +537,9 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
             2'b11: begin
 
                 if (v_fill_cnt == 'h0) begin
+                    v_fill_flag <= 0;
                     if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                         h_fill_cnt <= h_fill_cnt + 1'd1;
-                        v_fill_flag <= 0;
                         if (h_fill_cnt == (h_fill_size - 1)) begin // Shift out the new bit from fifo_rd_data
                             shift_cnt <= shift_cnt + 1'd1;
                             h_fill_cnt <= 'h0;
@@ -523,7 +562,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                     end
                 end
                 else begin
-                    v_fill_flag <= 1'b0;
+                    v_fill_flag <= 1'b1;
                     if (pix_cnt_per_de == 7'd81) begin
                         if (v_fill_cnt == (v_fill_size - 1'd1)) begin
                             v_fill_cnt <= 'h0;
@@ -539,58 +578,75 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
     end
 end
 
-//-----------------------------------
+//-----------------------------------------------------------
+
+// Count the output pixel, and cache the pixel every 32-bit
+assign pixel80_valid = (pix_cnt_per_de < 7'd80 && pixel_de);
 
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
+        pixel_out_cnt <= 0;
+    end else begin
+        //if (pixel80_valid) begin
+        if (pixel_de) begin
+            if (pix_cnt_per_de < 7'd80) begin
+                pixel_out_cnt <= pixel_out_cnt + 1'd1;
+            end
+            else begin
+                pixel_out_cnt <= pixel_out_cnt;
+            end
+        end
+        else begin
+            pixel_out_cnt <= 'h0;
+        end
+    end
+end
+
+always @(posedge pixel_clk or negedge pixel_rst_n) begin : proc_sh_reg
+    if(~pixel_rst_n) begin
+        shift_reg <= 0;
+    end else begin
+        shift_reg[0] <= msb_pat_data;
+        for (int i = 0; i < 15; i = i + 1) begin
+            shift_reg[i + 1] <= shift_reg[i];
+        end
+    end
+end
+
+assign line_pix_cache_din = shift_reg;
+//assign line_pix_cache_wr = (pixel_out_cnt[3:0] == 4'hf) ? 1'b1 : 1'b0;
+always @(posedge pixel_clk or negedge pixel_rst_n) begin
+    if(~pixel_rst_n) begin
          line_pix_cache_wr <= 1'b0;
-         line_pix_cache_din <= 'h0;
+         //line_pix_cache_din <= 'h0;
          line_pix_cache_wr_addr <= 'h0;
     end else begin
+        //line_pix_cache_din <= shift_reg;
+        // When pixel_out_cnt is 16*n-1, write the cache.
 
-        if (v_fill_flag && shift_cnt == 7'd31) begin
-            line_pix_cache_din <= fifo_rd_data[255:224];
+        if (pixel_out_cnt[3:0] == 4'hf) begin
             line_pix_cache_wr <= 1'b1;
-            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
-        end
-        else if (v_fill_flag && shift_cnt == 7'd63) begin
-            line_pix_cache_din <= fifo_rd_data[223:192];
-            line_pix_cache_wr <= 1'b1;
-            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
-        end
-        else if (v_fill_flag && shift_cnt == 7'd95) begin
-            line_pix_cache_din <= fifo_rd_data[191:160];
-            line_pix_cache_wr <= 1'b1;
-            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
-        end
-        else if (v_fill_flag && shift_cnt == 7'd127) begin
-            line_pix_cache_din <= fifo_rd_data[159:128];
-            line_pix_cache_wr <= 1'b1;
-            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
-        end
-        else if (v_fill_flag && shift_cnt == 7'd159) begin
-            line_pix_cache_din <= fifo_rd_data[127:96];
-            line_pix_cache_wr <= 1'b1;
-            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
-        end
-        else if (v_fill_flag && shift_cnt == 7'd191) begin
-            line_pix_cache_din <= fifo_rd_data[95:64];
-            line_pix_cache_wr <= 1'b1;
-            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
-        end
-        else if (v_fill_flag && shift_cnt == 7'd223) begin
-            line_pix_cache_din <= fifo_rd_data[63:32];
-            line_pix_cache_wr <= 1'b1;
-            line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
-        end
-        else if (v_fill_flag && shift_cnt == 7'd255) begin
-            line_pix_cache_din <= fifo_rd_data[31:0];
-            line_pix_cache_wr <= 1'b1;
-            line_pix_cache_wr_addr <= 'h0;
         end
         else begin
             line_pix_cache_wr <= 1'b0;
         end
+
+        if (line_pix_cache_wr) begin
+            if (line_pix_cache_wr_addr == 5'd4) begin
+                line_pix_cache_wr_addr <= 'h0;
+            end
+            else begin
+                line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
+            end
+        end
+/*
+        if (line_pix_cache_wr_addr == 5'd4) begin
+                line_pix_cache_wr_addr <= 'h0;
+            end
+            else begin
+                line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
+            end
+            */
             //TODO
     end
 end
@@ -599,17 +655,56 @@ end
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
         line_pix_cache_rd_addr <= 0;
+        line_pix_cache_rd_addr_r1 <= 0;
+        line_pix_cache_rd_addr_r2 <= 0;
+        line_pix_cache_80bit <= 0;
     end else begin
-        if (shift_cnt[4:0] == 5'd30) begin
-                line_pix_cache_rd_addr <= 'h0;
+        // 2 clock cycles delay to align with the RAM output
+        line_pix_cache_rd_addr_r2 <= line_pix_cache_rd_addr_r1;
+        line_pix_cache_rd_addr_r1 <= line_pix_cache_rd_addr;
+
+        if (pixel_de_r) begin
+            line_pix_cache_rd_addr <= 'h0;
         end
-        else begin
-            line_pix_cache_rd_addr <= line_pix_cache_rd_addr + 1'd1;
+        else begin // In the period of the pixel_de_r de-assertion to read cache
+            if (line_pix_cache_rd_addr != 'd4)  begin
+                line_pix_cache_rd_addr <= line_pix_cache_rd_addr + 1'd1;
+            end
+
+            case(line_pix_cache_rd_addr_r2)
+                4'd0: begin
+                    line_pix_cache_80bit[79:64] <= line_pix_cache_dout;
+                end
+                4'd1: begin
+                    line_pix_cache_80bit[63:48] <= line_pix_cache_dout;
+                end
+                4'd2: begin
+                    line_pix_cache_80bit[47:32] <= line_pix_cache_dout;
+                end
+                4'd3: begin
+                    line_pix_cache_80bit[31:16] <= line_pix_cache_dout;
+                end
+                4'd4: begin
+                    line_pix_cache_80bit[15:0] <= line_pix_cache_dout;
+                end
+                default: begin
+                    line_pix_cache_80bit <= line_pix_cache_80bit;
+                end
+            endcase
         end
     end
 end
 
- dpram_32inx64 line_pix_cache(
+// Check the output data
+
+wire [7:0]      comb_output_bit8;
+wire            comb_output_bit8_valid;
+
+assign comb_output_bit8 = {shift_reg[6:0], msb_pat_data};
+assign comb_output_bit8_valid = (pixel_out_cnt[2:0] == 3'd7 && pixel80_valid);
+
+// RAM output delay is 2 clock cycle
+ dpram_16inx16 line_pix_cache(
     .clock(pixel_clk),
     .data(line_pix_cache_din),
     .rdaddress(line_pix_cache_rd_addr),
