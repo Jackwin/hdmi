@@ -242,9 +242,9 @@ reg [31:0]  pat_start_addr, pat_end_addr;
 
 reg [7:0]   shift_cnt, shift_cnt_r;
 //Cache every line pixel output for the vertial filling
-reg [15:0]         line_pix_cache_din;
+reg [15:0]          line_pix_cache_din;
 wire [15:0]         line_pix_cache_dout;
-reg [3:0]          line_pix_cache_wr_addr;
+reg [3:0]           line_pix_cache_wr_addr;
 reg [3:0]           line_pix_cache_rd_addr;
 reg [3:0]           line_pix_cache_rd_addr_r1, line_pix_cache_rd_addr_r2;
 reg                 line_pix_cache_wr;
@@ -309,7 +309,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                     end
                 end
                 else begin
-                    if (shift_cnt == 8'd255 && h_fill_cnt == (h_fill_size - 2)) begin
+                    if (shift_cnt == 8'd255 && h_fill_cnt == (h_fill_size - 1)) begin
                         per_pat_read_times <= per_pat_read_times - 1'd1;
                         if (per_pat_read_times == 'h2 && per_pat_read_tail) begin // Start to send the last 256 bit
                             pat_tx_state <= PAT_TX_TAIL;
@@ -355,7 +355,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                 // Have fillings
                 else begin
                     // The tail length is 1
-                    if (shift_cnt == (per_pat_tail_pixel_num - 1'd1) && h_fill_cnt == (h_fill_size - 2)) begin
+                    if (shift_cnt == (per_pat_tail_pixel_num - 1'd1) && h_fill_cnt == (h_fill_size - 1)) begin
                         pat_num <= pat_num - 1'd1;
                         if (pat_num == 'b0) begin
                             pat_tx_state <= PAT_TX_IDLE;
@@ -376,7 +376,7 @@ end
 assign fifo_rd_ena = (pat_tx_state == PAT_TX_HEAD | pat_tx_state == PAT_TX_BODY
                     | pat_tx_state == PAT_TX_TAIL |
                     (pat_tx_state == PAT_TX_TAIL_WAIT && shift_cnt == (per_pat_tail_pixel_num - 2'd1)
-                        && h_fill_cnt == (h_fill_size - 2'd2) && h_fill_size!= 0))
+                        && h_fill_cnt == (h_fill_size - 2'd1) && h_fill_size!= 0))
                     |(pat_tx_state == PAT_TX_TAIL_WAIT && shift_cnt == (per_pat_tail_pixel_num - 2'd2) && h_fill_size == 'd0);
 
 
@@ -387,7 +387,7 @@ reg [7:0]   vpg_r, vpg_g, vpg_b;
  // Count the pixel in every de, and set 81st and 82nd pixel to be '0'
 reg [6:0]   pix_cnt_per_de, pix_cnt_per_de_r;
 wire        h_fill_true;
-wire        v_file_true;
+wire        v_fill_true;
 reg [5:0]   v_fill_cnt;
 reg         de_first_offset_line_r, de_first_offset_line_p;
 reg         pixel_de_r, pixel_de_p;
@@ -436,6 +436,13 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin : proc_
         // Buffer pix_cnt_per_de to aligh with pixel_de_r
         pix_cnt_per_de_r <= pix_cnt_per_de;
 
+        if (pixel_de) begin
+            pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
+        end
+        else begin
+            pix_cnt_per_de <= 'h0;
+        end
+/*
         if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de) begin
             pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
         end
@@ -445,21 +452,10 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin : proc_
         else begin
             pix_cnt_per_de <= 'h0;
         end
+        */
     end
 end
 
-
-/*
-wire [31:0] taps;
-
-shift_reg shift_reg_inst (
-    .clock (pixel_clk),
-    .aclr(~pixel_rst_n),
-    .shiftin(msb_pat_data_r),
-    .shiftout(),
-    .taps(taps)
-    );
-*/
 always @(posedge pixel_clk or negedge pixel_rst_n) begin
     if(~pixel_rst_n) begin
          shift_cnt <= 0;
@@ -479,7 +475,8 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
 
         case ({h_fill_true, v_fill_true})
             2'b00: begin
-                if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
+                if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT ||
+                    pat_tx_state == PAT_TX_BODY) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                     shift_cnt <= shift_cnt + 1'd1;
                     v_fill_flag <= 0;
                 end
@@ -487,7 +484,8 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
             2'b01: begin // Only verital filling
                 if (v_fill_cnt == 'h0) begin
                     v_fill_flag <= 0;
-                    if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
+                    if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT ||
+                        pat_tx_state == PAT_TX_BODY) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                         shift_cnt <= shift_cnt + 1'd1;
                     end
 
@@ -497,13 +495,14 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                 end
                 else begin
                     v_fill_flag <= 1'b1;
-                    if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
+                    if ((pat_tx_state == PAT_TX_BODY_WAIT || pat_tx_state == PAT_TX_TAIL_WAIT ||
+                        pat_tx_state == PAT_TX_BODY) && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                         shift_cnt <= shift_cnt + 1'd1;
                         //v_fill_flag <= 1;
                     end
 
                     if (pix_cnt_per_de == 7'd81) begin
-                        if (v_fill_cnt == (v_fill_size - 1'd1)) begin
+                        if (v_fill_cnt == v_fill_size) begin
                             v_fill_cnt <= 'h0;
                         end
                         else begin
@@ -516,7 +515,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                 if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                     h_fill_cnt <= h_fill_cnt + 1'd1;
                     v_fill_flag <= 0;
-                    if (h_fill_cnt == (h_fill_size - 1)) begin // Shift out the new bit from fifo_rd_data
+                    if (h_fill_cnt == (h_fill_size)) begin // Shift out the new bit from fifo_rd_data
                         shift_cnt <= shift_cnt + 1'd1;
                         h_fill_cnt <= 'h0;
                     end
@@ -524,7 +523,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                 else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                     h_fill_cnt <= h_fill_cnt + 1'd1;
                     v_fill_flag <= 0;
-                    if (shift_cnt != (per_pat_tail_pixel_num - 1) && h_fill_cnt == (h_fill_size - 1)) begin
+                    if (shift_cnt != (per_pat_tail_pixel_num - 1) && h_fill_cnt == (h_fill_size)) begin
                         shift_cnt <= shift_cnt + 1'd1;
                         h_fill_cnt <= 'h0;
                     end
@@ -540,7 +539,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                     v_fill_flag <= 0;
                     if (pat_tx_state == PAT_TX_BODY_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                         h_fill_cnt <= h_fill_cnt + 1'd1;
-                        if (h_fill_cnt == (h_fill_size - 1)) begin // Shift out the new bit from fifo_rd_data
+                        if (h_fill_cnt == (h_fill_size)) begin // Shift out the new bit from fifo_rd_data
                             shift_cnt <= shift_cnt + 1'd1;
                             h_fill_cnt <= 'h0;
                         end
@@ -548,7 +547,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                     else if (pat_tx_state == PAT_TX_TAIL_WAIT && pixel_de && (pix_cnt_per_de < 7'd80)) begin
                         h_fill_cnt <= h_fill_cnt + 1'd1;
                         v_fill_flag <= 0;
-                        if (shift_cnt != (per_pat_tail_pixel_num - 1) && h_fill_cnt == (h_fill_size - 1)) begin
+                        if (shift_cnt != (per_pat_tail_pixel_num - 1) && h_fill_cnt == (h_fill_size)) begin
                             shift_cnt <= shift_cnt + 1'd1;
                             h_fill_cnt <= 'h0;
                         end
@@ -564,7 +563,7 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                 else begin
                     v_fill_flag <= 1'b1;
                     if (pix_cnt_per_de == 7'd81) begin
-                        if (v_fill_cnt == (v_fill_size - 1'd1)) begin
+                        if (v_fill_cnt == v_fill_size) begin
                             v_fill_cnt <= 'h0;
                         end
                         else begin
@@ -639,15 +638,6 @@ always @(posedge pixel_clk or negedge pixel_rst_n) begin
                 line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
             end
         end
-/*
-        if (line_pix_cache_wr_addr == 5'd4) begin
-                line_pix_cache_wr_addr <= 'h0;
-            end
-            else begin
-                line_pix_cache_wr_addr <= line_pix_cache_wr_addr + 1'd1;
-            end
-            */
-            //TODO
     end
 end
 
@@ -699,9 +689,49 @@ end
 
 wire [7:0]      comb_output_bit8;
 wire            comb_output_bit8_valid;
+reg  [255:0]    recv_data_buf;
+reg             recv_data_valid;
+reg [255:0]    recv_data;
+reg  [4:0]      recv_cnt;
 
 assign comb_output_bit8 = {shift_reg[6:0], msb_pat_data};
 assign comb_output_bit8_valid = (pixel_out_cnt[2:0] == 3'd7 && pixel80_valid);
+
+always @(posedge pixel_clk or negedge pixel_rst_n) begin
+    if(~pixel_rst_n) begin
+        recv_cnt <= 0;
+        recv_data <= 0;
+        recv_data_valid <= 0;
+    end else begin
+        if (comb_output_bit8_valid) begin
+            recv_cnt <= recv_cnt + 1'd1;
+            for (int k = 0; k < 31; k = k + 1) begin
+                recv_data[(k + 1) * 8 +: 8] <= recv_data[k * 8 +: 8];
+            end
+            recv_data[7:0] <= comb_output_bit8;
+
+            if (recv_cnt == 5'd31) begin
+                recv_data_valid <= 1'd1;
+            end
+        end
+        else begin
+            recv_data_valid <= 1'd0;
+        end
+    end
+end
+
+// Write data to txt file
+
+integer w_file;
+
+initial w_file = $fopen("output_data.txt");
+
+always @(posedge pixel_clk) begin
+    if (recv_data_valid)
+        $fdisplay(w_file, "%h", recv_data);
+end
+
+
 
 // RAM output delay is 2 clock cycle
  dpram_16inx16 line_pix_cache(
