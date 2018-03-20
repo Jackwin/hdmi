@@ -153,8 +153,8 @@ always @(posedge clk) begin
         case (state)
             IDLE_s: begin
                 mem_sel <= 1'b1;
-                mem_rd <= 1'b0;
-                if ((onchip_mem_read_data[31:0] == 32'hfdfdfdfd) || start) begin
+                mem_rd <= 1'b1;
+                if ((onchip_mem_read_data[7:0] == 8'h77) || start) begin
                     state <= INIT_READ_ONCHIP_MEM_s;
                     mem_rd <= 1'b1;
                     mem_sel <= 1'b1;
@@ -188,22 +188,19 @@ always @(posedge clk) begin
             end
             SEND_DATA_s: begin
                 frame_trig <= 1'b0;
+                if (de_in) begin
+                    pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
+                end
+                else begin
+                    pix_cnt_per_de <= 0;
+                end
+
                 if (de_in & de_first_offset_line_in) begin
                     pix_data_out <= display_video_left_offset_in;
                 end
                 else if (de_in) begin
-                    pix_cnt_per_de <= pix_cnt_per_de + 1'd1;
-
                     if (pix_cnt_per_de < 7'd80) begin
                         cnt <= cnt + 1'd1;
-                        /*
-                        if (line_cnt[7]) begin
-                            pix_data_out <= 24'hffffff;
-                        end
-                        else begin
-                            pix_data_out <= 24'h000000;
-                        end
-                        */
                         case(cnt)
                             5'd0: pix_data_out <= mem_data[767: (767 - 24 * 1 + 1)];
                             5'd1: pix_data_out <= mem_data[(767 - 24 * 1) : (767 - 24 * 2 + 1)];
@@ -246,9 +243,7 @@ always @(posedge clk) begin
                         pix_data_out <= 0;
                     end
                 end
-                else begin
-                    pix_cnt_per_de <= 'h0;
-                end
+
 
                 if ((cnt == 5'd27 || cnt == 5'd29 || cnt == 5'd31) & de_in) begin
                     mem_rd <= 1'd1;
