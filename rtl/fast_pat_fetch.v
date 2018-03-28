@@ -347,9 +347,9 @@ always @(posedge clk) begin
             line_cnt <= line_cnt + 1'd1;
             $display("line_cnt is %d",line_cnt);
         end
-        else if (de_fall_edge) begin
-            line_cnt <= 'h0;
-        end
+        //else if (de_fall_edge) begin
+        //    line_cnt <= 'h0;
+       // end
     end
 end
 
@@ -638,23 +638,24 @@ always @(posedge clk) begin
         de_out <= de_in;
     end
 end
-//---------------------------------------------
-reg [23:0]      pixel_out_data_r[9:0];
+//-------------------------------------------------------------------------
+reg [23:0]      pixel_out_data_r[0:10];
 reg [4:0]       pixel_out_cnt;
 
 wire [255:0]    file_output_data0, file_output_data1, file_output_data2;
-
+wire [23:0]     tmp_reg;
+assign tmp_reg = pixel_out_data_r[10];
 assign file_output_data0 = {pixel_out_data_r[9], pixel_out_data_r[8], pixel_out_data_r[7],
                             pixel_out_data_r[6], pixel_out_data_r[5], pixel_out_data_r[4],
                             pixel_out_data_r[3], pixel_out_data_r[2], pixel_out_data_r[1],
                             pixel_out_data_r[0], pix_data_out[23:8]};
 
-assign file_output_data0 = {pixel_out_data_r[9][7:0], pixel_out_data_r[8], pixel_out_data_r[7],
+assign file_output_data1 = {tmp_reg[7:0], pixel_out_data_r[9], pixel_out_data_r[8], pixel_out_data_r[7],
                             pixel_out_data_r[6], pixel_out_data_r[5], pixel_out_data_r[4],
                             pixel_out_data_r[3], pixel_out_data_r[2], pixel_out_data_r[1],
                             pixel_out_data_r[0], pix_data_out[23:16]};
 
-assign file_output_data0 = {pixel_out_data_r[9][15:0], pixel_out_data_r[8], pixel_out_data_r[7],
+assign file_output_data2 = {pixel_out_data_r[9][15:0], pixel_out_data_r[8], pixel_out_data_r[7],
                             pixel_out_data_r[6], pixel_out_data_r[5], pixel_out_data_r[4],
                             pixel_out_data_r[3], pixel_out_data_r[2], pixel_out_data_r[1],
                             pixel_out_data_r[0], pix_data_out};
@@ -666,27 +667,42 @@ initial w_file = $fopen("fast_output_data.txt");
 always @(posedge clk) begin
     if (~rst_n) begin
         pixel_out_cnt <= 0;
-        for (int i = 0; i < 9; i = i + 1) begin
+        for (int i = 0; i < 10; i = i + 1) begin
             pixel_out_data_r[i] <= 'h0;
         end
     end
     else begin
-        for(int i = 0; i < 8; i = i + 1) begin
-            pixel_out_data_r[i + 1] <= pixel_out_data_r[i];
-        end
-        pixel_out_data_r[0] <= pix_data_out;
+         //if (line_cnt > 0 && line_cnt < 1081) begin
+
+        //end
 
         if (de_out) begin
-            pixel_out_cnt <= pixel_out_cnt + 1'd1;
-            if (pixel_out_cnt == 4'd10) begin
-
-            if (pixel_out_cnt == 4'd10 || pixel_out_cnt == 4'd21 || pixel_out_cnt == 4'd31) begin
-                pixel_out_cnt <= 'h0;
-                $fdisplay(w_file, "%h", file_output_data);
+            for(int i = 0; i < 10; i = i + 1) begin
+                pixel_out_data_r[i + 1] <= pixel_out_data_r[i];
             end
+            pixel_out_data_r[0] <= pix_data_out;
+           // if (line_cnt > 0 && line_cnt < 1081) begin
+            pixel_out_cnt <= pixel_out_cnt + 1'd1;
+            if (pixel_out_cnt == 5'd10) begin
+                $display($time);
+                $display("line is %d, file_output_data is %h", line_cnt, file_output_data0);
+                $fdisplay(w_file, "%h", file_output_data0);
+            end
+            else if (pixel_out_cnt == 5'd21) begin
+                $display($time);
+                $display("line is %d,file_output_data is %h",line_cnt, file_output_data1);
+                $fdisplay(w_file, "%h", file_output_data1);
+            end
+            else if (pixel_out_cnt == 5'd31) begin
+                $display($time);
+                $display("line_cnt is %d, file_output_data is %h", line_cnt, file_output_data2);
+                $fdisplay(w_file, "%h", file_output_data2);
+            end
+           // end
         end
     end
 end
+
 /*
 timer # (
     .MAX(512)
