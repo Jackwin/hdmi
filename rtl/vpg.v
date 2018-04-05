@@ -189,7 +189,7 @@ wire [7:0]    gen_g/*synthesis keep*/;
 wire [7:0]    gen_b/*synthesis keep*/;
 
 //convert time: 1-clock
-/*
+
 pattern_gen pattern_gen_inst(
     .reset_n(vpg_pll_locked & ~mode_change),
     .pixel_clk(clk_148_5),
@@ -215,7 +215,7 @@ assign vpg_vs     = gen_vs;
 assign vpg_r     = gen_r;
 assign vpg_g     = gen_g;
 assign vpg_b     = gen_b;
-*/
+
 // Load DMD pattern from DDR3 and gennerate HDMI standard signals
 /*
 pattern_fetch_send pattern_fetch_send_inst (
@@ -278,6 +278,7 @@ wire           dmd_flip_left_and_right;//flip left and right //left right flip: 
 wire [10:0]    frame_count;
 
 wire          h_sync_hdmi, v_sync_hdmi, de_hdmi;
+/*
 display_vedio_generate_DMD_specific_faster display_vedio_generate_DMD_specific_faster_inst (
     .clk_i(clk_148_5),
     .rst_ni(vpg_pll_locked),
@@ -317,6 +318,20 @@ fast_pat_fetch fast_pat_fetch_inst (
     .onchip_mem_write_data (onchip_mem_write_data),
     .onchip_mem_write      (onchip_mem_write),
     .onchip_mem_read_data  (onchip_mem_rddata),
+
+    .ddr3_emif_clk          (ddr3_emif_clk),
+    .ddr3_emif_rst_n        (ddr3_emif_rst_n),
+    .ddr3_emif_ready        (ddr3_emif_ready),
+    .ddr3_emif_read_data    (ddr3_emif_read_data),
+    .ddr3_emif_rddata_valid (ddr3_emif_rddata_valid),
+
+    .ddr3_emif_read         (ddr3_emif_read),
+    .ddr3_emif_write        (ddr3_emif_write),
+    .ddr3_emif_addr         (ddr3_emif_addr),
+    .ddr3_emif_write_data   (ddr3_emif_write_data),
+    .ddr3_emif_byte_enable  (ddr3_emif_byte_enable),
+    .ddr3_emif_burst_count  (ddr3_emif_burst_count),
+
     .start                 (start),
     .frame_trig            (frame_start_trig),
     .frame_busy            (frame_busy),
@@ -339,7 +354,7 @@ assign vpg_vs     = v_sync_out;
 assign vpg_r     = pix_data_out[23:16];
 assign vpg_g     = pix_data_out[15:8];
 assign vpg_b     = pix_data_out[7:0];
-
+*/
 endmodule
 
 

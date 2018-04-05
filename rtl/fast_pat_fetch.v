@@ -98,15 +98,11 @@ assign fifo_rd_clk = clk;
 
 // Generate ddr_rddata_valid according to the DDR3 read delay
 always @(posedge ddr3_emif_clk) begin
-    for (int i = 0; i < DDR3_READ_DELAY; i = i + 1) begin
-        ddr3_read_r[i + 1] <= ddr3_read_r[i];
-    end
+    ddr3_read_r[DDR3_READ_DELAY-1:1] <= ddr3_read_r[DDR3_READ_DELAY-2:0];
     ddr3_read_r[0] <= ddr3_read;
 end
 
-assign ddr3_read_data_valid = ddr3_read_r[DDR3_READ_DELAY];
-
-
+assign ddr3_read_data_valid = ddr3_read_r[DDR3_READ_DELAY-1];
 
 timer ddr3_read_timer (
     .clk      (ddr3_emif_clk),
@@ -405,11 +401,10 @@ always @(posedge clk) begin
        // pix_cnt_per_de <= 'h0;
         case (state)
             IDLE_s: begin
-                line_cnt <= 'h0;
                 mem_sel <= 1'b1;
                 mem_rd <= 1'b1;
                 // Read data from on-chip memory
-                if ((onchip_mem_read_data[7:0] == 8'h55) || start) begin
+                if (onchip_mem_read_data[7:0] == 8'h55) begin
                     data_source <= 1'b1;
                     state <= INIT_READ_MEM_s;
                     mem_rd <= 1'b1;
@@ -423,7 +418,7 @@ always @(posedge clk) begin
 
                 end
                 // Read data from FIFO
-                else if (onchip_mem_read_data[7:0] == 8'haa) begin
+                else if (onchip_mem_read_data[7:0] == 8'haa || start) begin
                     data_source <= 1'b0;
                     mem_pattern_total_num <= onchip_mem_read_data[63:32];
                     mem_addr_space_per_pattern <= onchip_mem_read_data[79:64];
@@ -639,6 +634,7 @@ always @(posedge clk) begin
     end
 end
 //-------------------------------------------------------------------------
+/*
 reg [23:0]      pixel_out_data_r[0:10];
 reg [4:0]       pixel_out_cnt;
 
@@ -702,7 +698,7 @@ always @(posedge clk) begin
         end
     end
 end
-
+*/
 /*
 timer # (
     .MAX(512)

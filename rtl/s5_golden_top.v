@@ -307,7 +307,7 @@ wire [4:0]    ddr3_burst_count;
 wire          ddr3_begin_burst;
 wire [31:0]   ddr3_byte_ena;
 
-
+/*
 fast_wps_nios_top fast_wps_nios_top_i (
     .clk50m_in              (clkin_50),
     .reset_n                (cpu_resetn),
@@ -371,7 +371,7 @@ fast_wps_nios_top fast_wps_nios_top_i (
     .hdmi_tx_hs             (hdmi_tx_hs)
 
    );
-
+*/
 // PCI-e signals
 wire L0_led, alive_led, comp_led, gen2_led, gen3_led;
 wire [3:0] lane_active_led;

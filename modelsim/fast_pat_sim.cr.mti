@@ -12,11 +12,4 @@ Model Technology ModelSim SE-64 vlog 10.4 Compiler 2014.12 Dec  3 2014
 Top level modules:
 	display_vedio_generate_DMD_specific_faster
 
-} {} {}} E:/chunjie/fast-wps/niosII_fast_wps/software/hdmi/rtl/fast_pat_fetch.v {1 {vlog -work work -novopt -stats=none E:/chunjie/fast-wps/niosII_fast_wps/software/hdmi/rtl/fast_pat_fetch.v
-Model Technology ModelSim SE-64 vlog 10.4 Compiler 2014.12 Dec  3 2014
--- Compiling module fast_pat_fetch
-
-Top level modules:
-	fast_pat_fetch
-
 } {} {}}
