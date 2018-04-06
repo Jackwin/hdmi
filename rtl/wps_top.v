@@ -108,7 +108,7 @@ ddr3_usr_logic ddr3_usr_logic_inst (
     .read_data_valid_out   (ddr3_usr_logic_read_data_valid)
 );
 
-
+/*
 onchip_mem_usr_logic onchip_mem_usr_logic_inst (
     .clk                     (mem_clk),
     .rst_n                   (mem_rst_n),
@@ -300,5 +300,5 @@ display_vedio_generate_DMD_specific_faster display_vedio_generate_DMD_specific_f
 
     .frame_count(frame_count)
 );
-
+*/
 endmodule
