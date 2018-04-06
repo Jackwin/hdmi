@@ -44,7 +44,7 @@ wire            onchip_mem_read_start;
 wire            onchip_mem_read_done;
 wire            wps_send_start;
 //onchip_mem_usr_logic
-wire            onchip_mem_usr_logic_read_req;
+reg            onchip_mem_usr_logic_read_req;
 wire            onchip_mem_usr_logic_data_ready;
 wire [255+32:0] onchip_mem_usr_logic_read_data;
 wire            onchip_mem_usr_logic_read_data_valid;
@@ -67,7 +67,7 @@ wire [255+32:0] ddr3_usr_logic_read_data;
 wire            ddr3_usr_logic_read_data_valid;
 
 // interface_256in_24out signals
-reg [255:32:0]  interface_rx_data;
+reg [255+32:0]  interface_rx_data;
 reg             interface_rx_data_valid;
 wire            interface_rx_ready;
 wire [23:0]     interface_tx_data;
@@ -79,6 +79,20 @@ wire        pingpongFIFO_ready;
 wire        pingpongFIFO_read;
 wire [23:0] pingpongFIFO_data;
 wire        pingpongFIFO_data_valid;
+
+// wps_send signals
+wire           h_sync_hdmi, v_sync_hdmi, de_hdmi;
+wire           de_o_first_offset_line;
+wire [23:0]    display_vedio_left_offset;
+wire           frame_start_trig;
+wire           frame_busy;
+wire           hsync_o_with_camera_format;//active high
+wire           vsync_o_with_camera_format;//active low
+wire           de_o;//active high
+wire           hsync_o_with_hdmi_format;
+wire           vsync_o_with_hdmi_format;
+wire           de_o_with_hdmi_format;
+wire [10:0]    frame_count;
 
 ddr3_usr_logic ddr3_usr_logic_inst (
     .ddr3_emif_clk         (mem_clk),
@@ -98,7 +112,7 @@ ddr3_usr_logic ddr3_usr_logic_inst (
     .to_read_frame_num_in  (to_read_frame_num),
     .to_read_byte_in       (to_read_byte),
     .one_frame_byte_in     (one_frame_byte),
-    .ddr3_read_start       (drr3_read_start),
+    .ddr3_read_start       (ddr3_read_start),
     .ddr3_read_done_out    (ddr3_read_done),
 
     //interface_256in_24out.v
@@ -130,18 +144,18 @@ onchip_mem_usr_logic onchip_mem_usr_logic_inst (
     .read_data_valid_out     (onchip_mem_usr_logic_read_data_valid)
 
 
-);
+); */
 
 wps_controller wps_controller_inst (
-    .clk                      (clk),
-    .rst_n                    (rst_n),
+    .clk                      (mem_clk),
+    .rst_n                    (mem_rst_n),
 
     .usr_start_addr_out       (usr_start_addr),
-    .to_read_byte_out         (to_read_frame_num),
+    .to_read_byte_out         (to_read_byte),
     .to_read_frame_num_out    (to_read_frame_num),
     .one_frame_byte_out       (one_frame_byte),
 
-    .drr3_read_start_out      (ddr3_read_start),
+    .ddr3_read_start_out      (ddr3_read_start),
     .ddr3_read_done_in        (ddr3_read_done),
     .onchip_mem_read_start_out(onchip_mem_read_start),
     .onchip_mem_read_done_in  (onchip_mem_read_done),
@@ -170,7 +184,7 @@ always @(posedge mem_clk) begin
     onchip_mem_wps_controller_read_valid <= onchip_mem_wps_controller_read_r;
 
     onchip_mem_usr_logic_read_r <= onchip_mem_usr_logic_read;
-    onchip_mem_wps_controller_read_valid <= onchip_mem_usr_logic_read_r;
+    onchip_mem_usr_logic_read_valid <= onchip_mem_usr_logic_read_r;
 end
 
 // Mux data from DDR3 or onchip memory for interface_256in_24out
@@ -200,7 +214,7 @@ always @* begin
         1'b1: begin
             interface_rx_data = onchip_mem_usr_logic_read_data;
             interface_rx_data_valid = onchip_mem_usr_logic_read_valid;
-            onchip_mem_usr_logic_read_req = interface_tx_ready;
+            onchip_mem_usr_logic_read_req = interface_rx_ready;
         end
     endcase
 end
@@ -240,7 +254,7 @@ wps_send wps_send_inst (
     .rst_n (clk148_5m_rst_n),
 
     .to_send_frame_num_in  (to_read_frame_num),
-    .to_read_byte_in       (to_read_byte),
+    .to_send_byte_in       (to_read_byte),
     .one_frame_byte_in     (one_frame_byte),
     .start                 (wps_send_start),
 
@@ -262,18 +276,7 @@ wps_send wps_send_inst (
     .pingpong_data_valid_in (pingpongFIFO_data_valid)
 );
 
-wire           h_sync_hdmi, v_sync_hdmi, de_hdmi;
-wire           de_o_first_offset_line;
-wire [23:0]    display_vedio_left_offset;
-wire           frame_start_trig;
-wire           frame_busy;
-wire           hsync_o_with_camera_format;//active high
-wire           vsync_o_with_camera_format;//active low
-wire           de_o;//active high
-wire           hsync_o_with_hdmi_format;
-wire           vsync_o_with_hdmi_format;
-wire           de_o_with_hdmi_format;
-wire [10:0]    frame_count;
+
 
 display_vedio_generate_DMD_specific_faster display_vedio_generate_DMD_specific_faster_inst (
     .clk_i(clk148_5m),
@@ -300,5 +303,5 @@ display_vedio_generate_DMD_specific_faster display_vedio_generate_DMD_specific_f
 
     .frame_count(frame_count)
 );
-*/
+
 endmodule

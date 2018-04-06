@@ -3,3 +3,5 @@
 *.objdump
 *.bck
 *.bak
+/modelsim/*
+!/modelsim/*.tcl

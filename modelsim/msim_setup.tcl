@@ -166,52 +166,54 @@ if ![ string match "*ModelSim ALTERA*" [ vsim -version ] ] {
   ensure_lib                   ./libraries/twentynm_hip_ver/
   vmap       twentynm_hip_ver  ./libraries/twentynm_hip_ver/
 }
-ensure_lib                        ./libraries/fifo_170/
-vmap       fifo_170 ./libraries/fifo_170/
+#ensure_lib                        ./libraries/fifo_170/
+#vmap       fifo_170 ./libraries/fifo_170/
 
-ensure_lib                        ./libraries/ram_2port_170/
-vmap       ram_2port_170 ./libraries/ram_2port_170/
+#ensure_lib                        ./libraries/ram_2port_170/
+#vmap       ram_2port_170 ./libraries/ram_2port_170/
 
-ensure_lib                   ./libraries/altshift_taps_170/
-vmap       altshift_taps_170 ./libraries/altshift_taps_170/
+#ensure_lib                   ./libraries/altshift_taps_170/
+#vmap       altshift_taps_170 ./libraries/altshift_taps_170/
 
-ensure_lib              ./libraries/fifo_69x8192/
-vmap       fifo_69x8192 ./libraries/fifo_69x8192/
-ensure_lib              ./libraries/fifo_74in_37out/
-vmap       fifo_74in_37out ./libraries/fifo_74in_37out/
-ensure_lib                  ./libraries/fifo_512inx64out/
-vmap       fifo_512inx64out ./libraries/fifo_512inx64out/
-ensure_lib                  ./libraries/fifo_34inx64/
-vmap       fifo_34inx64 ./libraries/fifo_34inx64/
-ensure_lib                  ./libraries/dcfifo_33inx256/
-vmap       dcfifo_33inx256 ./libraries/dcfifo_33inx256/
-ensure_lib                  ./libraries/fifo_256in_32out/
-vmap       fifo_256in_32out ./libraries/fifo_256in_32out/
-ensure_lib                  ./libraries/fifo_256inx512/
-vmap       fifo_256inx512 ./libraries/fifo_256inx512/
-ensure_lib                  ./libraries/fifo_148in_37out/
-vmap       fifo_148in_37out ./libraries/fifo_148in_37out/
-ensure_lib                  ./libraries/fifo_135inx512/
-vmap       fifo_135inx512 ./libraries/fifo_135inx512/
-ensure_lib                  ./libraries/scfifo_37inx512/
-vmap       scfifo_37inx512 ./libraries/scfifo_37inx512/
+#ensure_lib              ./libraries/fifo_69x8192/
+#vmap       fifo_69x8192 ./libraries/fifo_69x8192/
+#ensure_lib              ./libraries/fifo_74in_37out/
+#vmap       fifo_74in_37out ./libraries/fifo_74in_37out/
+#ensure_lib                  ./libraries/fifo_512inx64out/
+#vmap       fifo_512inx64out ./libraries/fifo_512inx64out/
+#ensure_lib                  ./libraries/fifo_34inx64/
+#vmap       fifo_34inx64 ./libraries/fifo_34inx64/
+#ensure_lib                  ./libraries/dcfifo_33inx256/
+#vmap       dcfifo_33inx256 ./libraries/dcfifo_33inx256/
+#ensure_lib                  ./libraries/fifo_256in_32out/
+#vmap       fifo_256in_32out ./libraries/fifo_256in_32out/
+#ensure_lib                  ./libraries/fifo_256inx512/
+#vmap       fifo_256inx512 ./libraries/fifo_256inx512/
+#ensure_lib                  ./libraries/fifo_148in_37out/
+#vmap       fifo_148in_37out ./libraries/fifo_148in_37out/
+#ensure_lib                  ./libraries/fifo_135inx512/
+#vmap       fifo_135inx512 ./libraries/fifo_135inx512/
+#ensure_lib                  ./libraries/scfifo_37inx512/
+#vmap       scfifo_37inx512 ./libraries/scfifo_37inx512/
 
-ensure_lib                  ./libraries/scfifo_32inx512/
-vmap       scfifo_32inx512 ./libraries/scfifo_32inx512/
+#ensure_lib                  ./libraries/scfifo_32inx512/
+#vmap       scfifo_32inx512 ./libraries/scfifo_32inx512/
 
-ensure_lib                  ./libraries/dpram_32inx64/
-vmap       dpram_32inx64 ./libraries/dpram_32inx64/
-ensure_lib                  ./libraries/dpram_135inx512/
-vmap       dpram_135inx512 ./libraries/dpram_135inx512/
+#ensure_lib                  ./libraries/dpram_32inx64/
+#vmap       dpram_32inx64 ./libraries/dpram_32inx64/
+#ensure_lib                  ./libraries/dpram_135inx512/
+#vmap       dpram_135inx512 ./libraries/dpram_135inx512/
 
-ensure_lib                  ./libraries/dpram_16inx16/
-vmap       dpram_16inx16 ./libraries/dpram_16inx16/
-ensure_lib                  ./libraries/shift_reg/
-vmap       shift_reg ./libraries/shift_reg/
+#ensure_lib                  ./libraries/dpram_16inx16/
+#vmap       dpram_16inx16 ./libraries/dpram_16inx16/
+#ensure_lib                  ./libraries/shift_reg/
+#vmap       shift_reg ./libraries/shift_reg/
 
 #wps_top_tb
-ensure_lib                  ./libraries/scfifo_288inx128/
-vmap       scfifo_288inx128 ./libraries/scfifo_288inx128/
+ensure_lib                  ./libraries/fifo_170/
+#vmap       scfifo_288inx128 ./libraries/fifo_170/
+#vmap       dcfifo_288inx128_9out ./libraries/fifo_170/
+#vmap       dcfifo_8inx4096_16out ./libraries/fifo_170/
 
 # ----------------------------------------
 # Compile device library files
@@ -236,50 +238,53 @@ alias dev_com {
 # Compile the design files in correct order
 alias com {
   echo "\[exec\] com"
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_69x8192/fifo_170/sim/fifo_69x8192_fifo_170_cr3w5xa.v" -work fifo_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_74in_37out/fifo_170/sim/fifo_74in_37out_fifo_170_xdsjzha.v" -work fifo_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_512inx64out/fifo_170/sim/fifo_512inx64out_fifo_170_emnhebq.v" -work fifo_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_34inx64/fifo_170/sim/fifo_34inx64_fifo_170_dfco2oy.v" -work fifo_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dcfifo_33inx256/fifo_170/sim/dcfifo_33inx256_fifo_170_dw7rzgi.v" -work fifo_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_256in_32out/fifo_170/sim/fifo_256in_32out_fifo_170_66gptgq.v" -work fifo_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dcfifo_256inx512/fifo_170/sim/dcfifo_256inx512_fifo_170_3qhqjri.v" -work fifo_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_148in_37out/fifo_170/sim/fifo_148in_37out_fifo_170_jb4i4ua.v" -work fifo_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dcfifo_135inx512/fifo_170/sim/dcfifo_135inx512_fifo_170_zzjchoy.v" -work fifo_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/scfifo_37inx512/fifo_170/sim/scfifo_37inx512_fifo_170_rmas5za.v" -work fifo_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/scfifo_32inx512/fifo_170/sim/scfifo_32inx512_fifo_170_b7ottha.v" -work fifo_170
+    #eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_69x8192/fifo_170/sim/fifo_69x8192_fifo_170_cr3w5xa.v" -work fifo_170
+    #eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_74in_37out/fifo_170/sim/fifo_74in_37out_fifo_170_xdsjzha.v" -work fifo_170
+    #eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_512inx64out/fifo_170/sim/fifo_512inx64out_fifo_170_emnhebq.v" -work fifo_170
+    #eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_34inx64/fifo_170/sim/fifo_34inx64_fifo_170_dfco2oy.v" -work fifo_170
+    #eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dcfifo_33inx256/fifo_170/sim/dcfifo_33inx256_fifo_170_dw7rzgi.v" -work fifo_170
+   # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_256in_32out/fifo_170/sim/fifo_256in_32out_fifo_170_66gptgq.v" -work fifo_170
+    #eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dcfifo_256inx512/fifo_170/sim/dcfifo_256inx512_fifo_170_3qhqjri.v" -work fifo_170
+   # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/fifo_148in_37out/fifo_170/sim/fifo_148in_37out_fifo_170_jb4i4ua.v" -work fifo_170
+   # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dcfifo_135inx512/fifo_170/sim/dcfifo_135inx512_fifo_170_zzjchoy.v" -work fifo_170
+   # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/scfifo_37inx512/fifo_170/sim/scfifo_37inx512_fifo_170_rmas5za.v" -work fifo_170
+   # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/scfifo_32inx512/fifo_170/sim/scfifo_32inx512_fifo_170_b7ottha.v" -work fifo_170
 
     # wps_top_tb
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/scfifo_288inx128/fifo_170/sim/scfifo_288inx128_fifo_170_i6fkd6y.v" -work fifo_170
+   # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/scfifo_288inx128/fifo_170/sim/scfifo_288inx128_fifo_170_i6fkd6y.v" -work fifo_170
+    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_288inx128.v" -work fifo_170
+    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_288inx128_18out.v" -work fifo_170
+    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_16inx8192.v" -work fifo_170
+    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_24inx512.v" -work fifo_170
+   # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dpram_32inx64/ram_2port_170/sim/dpram_32inx64_ram_2port_170_polr63i.v" -work ram_2port_170
+   # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dpram_135inx512/ram_2port_170/sim/dpram_135inx512_ram_2port_170_xj5kcoy.v" -work ram_2port_170
+   # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dpram_16inx16/ram_2port_170/sim/dpram_16inx16_ram_2port_170_iols3si.v" -work ram_2port_170
+   # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/shift_reg/altshift_taps_170/sim/shift_reg_altshift_taps_170_yr7u2ry.v" -work altshift_taps_170
 
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dpram_32inx64/ram_2port_170/sim/dpram_32inx64_ram_2port_170_polr63i.v" -work ram_2port_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dpram_135inx512/ram_2port_170/sim/dpram_135inx512_ram_2port_170_xj5kcoy.v" -work ram_2port_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dpram_16inx16/ram_2port_170/sim/dpram_16inx16_ram_2port_170_iols3si.v" -work ram_2port_170
-    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/shift_reg/altshift_taps_170/sim/shift_reg_altshift_taps_170_yr7u2ry.v" -work altshift_taps_170
-
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_69x8192/sim/fifo_69x8192.v" -work fifo_69x8192
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_74in_37out/sim/fifo_74in_37out.v" -work fifo_74in_37out
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_512inx64out/sim/fifo_512inx64out.v" -work fifo_512inx64out
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_34inx64/sim/fifo_34inx64.v" -work fifo_34inx64
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_33inx256/sim/dcfifo_33inx256.v" -work dcfifo_33inx256
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_256in_32out/sim/fifo_256in_32out.v" -work fifo_256in_32out
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_256inx512/sim/dcfifo_256inx512.v" -work fifo_256inx512
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_148in_37out/sim/fifo_148in_37out.v" -work fifo_148in_37out
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_135inx512/sim/dcfifo_135inx512.v" -work fifo_135inx512
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_37inx512/sim/scfifo_37inx512.v" -work scfifo_37inx512
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_32inx512/sim/scfifo_32inx512.v" -work scfifo_32inx512
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dpram_135inx512/sim/dpram_135inx512.v" -work dpram_135inx512
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dpram_16inx16/sim/dpram_16inx16.v" -work dpram_16inx16
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/shift_reg/sim/shift_reg.v" -work shift_reg
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_69x8192/sim/fifo_69x8192.v" -work fifo_69x8192
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_74in_37out/sim/fifo_74in_37out.v" -work fifo_74in_37out
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_512inx64out/sim/fifo_512inx64out.v" -work fifo_512inx64out
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_34inx64/sim/fifo_34inx64.v" -work fifo_34inx64
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_33inx256/sim/dcfifo_33inx256.v" -work dcfifo_33inx256
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_256in_32out/sim/fifo_256in_32out.v" -work fifo_256in_32out
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_256inx512/sim/dcfifo_256inx512.v" -work fifo_256inx512
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/fifo_148in_37out/sim/fifo_148in_37out.v" -work fifo_148in_37out
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_135inx512/sim/dcfifo_135inx512.v" -work fifo_135inx512
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_37inx512/sim/scfifo_37inx512.v" -work scfifo_37inx512
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_32inx512/sim/scfifo_32inx512.v" -work scfifo_32inx512
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dpram_135inx512/sim/dpram_135inx512.v" -work dpram_135inx512
+   # eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dpram_16inx16/sim/dpram_16inx16.v" -work dpram_16inx16
+  #  eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/shift_reg/sim/shift_reg.v" -work shift_reg
 
     # wps_top_tb
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_288inx128/sim/scfifo_288inx128.v" -work scfifo_288inx128
+
 }
 
 # ----------------------------------------
 # Elaborate top level design
 alias elab {
   echo "\[exec\] elab"
-  eval vsim -t ps $ELAB_OPTIONS $USER_DEFINED_ELAB_OPTIONS -L work -L work_lib -L scfifo_288inx128 -L dpram_16inx16 -L altshift_taps_170 -L shift_reg -L fifo_170 -L scfifo_32inx512 -L fifo_69x8192 -L fifo_74in_37out -L fifo_512inx64out -L fifo_34inx64 -L dcfifo_33inx256 -L fifo_256in_32out -L fifo_256inx512 -L fifo_148in_37out -L fifo_135inx512 -L scfifo_37inx512 -L ram_2port_170 -L dpram_32inx64 -L dpram_135inx512 -L altera_ver -L lpm_ver -L sgate_ver -L altera_mf_ver -L altera_lnsim_ver -L twentynm_ver -L twentynm_hssi_ver -L twentynm_hip_ver $TOP_LEVEL_NAME
+  eval vsim -t ps $ELAB_OPTIONS $USER_DEFINED_ELAB_OPTIONS -L work -L work_lib -L fifo_170 -L altera_ver -L lpm_ver -L sgate_ver -L altera_mf_ver -L altera_lnsim_ver -L twentynm_ver -L twentynm_hssi_ver -L twentynm_hip_ver $TOP_LEVEL_NAME
 }
 
 # ----------------------------------------

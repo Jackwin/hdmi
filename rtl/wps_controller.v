@@ -4,10 +4,9 @@
 //          2. Send data to wps_send.v
 //          3. Register management
 
-
-
 `define START_PLAY_REG_OFFSET 255
 `define PATTERN_SOURCE_REG_OFFSET 254
+`define RSV2_OFFSET 253
 `define PLAY_DONE_REG_OFFSET 247
 `define RSV0_OFFSET 246
 
@@ -18,6 +17,7 @@
 `define TO_SEND_TOTAL_BYTE_REG_OFFSET 127
 `define START_ADDR_REG_OFFSET 95
 `define RSV1_OFFSET 63
+`define RSV3_OFFSET 31
 module wps_controller (
     input               clk,
     input               rst_n,
@@ -28,7 +28,7 @@ module wps_controller (
     output reg [31:0]   one_frame_byte_out,
 
     //---Interface to ddr3_usr_logic------
-    output reg          drr3_read_start_out,
+    output reg          ddr3_read_start_out,
     input               ddr3_read_done_in,
     //---Interface to onchip_mem_usr_logic------
     output reg          onchip_mem_read_start_out,
@@ -58,8 +58,9 @@ localparam  POLL_REG = 3'd0,
 // Register list
 reg         pattern_source_reg;
 reg         start_play_reg;
+reg [5:0]   rsv2_reg;
 reg         play_done_reg;
-reg [29:0]  rsv0_reg;
+reg [23:0]  rsv0_reg;
 reg [31:0]  to_send_frame_reg;
 reg [31:0]  one_frame_byte_reg;
 reg [15:0]  pattern_h_pix_reg;
@@ -67,8 +68,9 @@ reg [15:0]  pattern_v_line_reg;
 reg [31:0]  to_send_total_byte_reg;
 reg [31:0]  start_addr_reg;
 reg [31:0]  rsv1_reg;
+reg [31:0]  rsv3_reg;
 
-
+reg [2:0]   state;
 reg         mem_sel;
 reg         mem_rd;
 wire        mem_rd_valid;
@@ -100,7 +102,7 @@ assign mem_rd_valid = onchip_mem_read_valid;
 
 always @(posedge clk) begin
     if(~rst_n) begin
-        stsate <= POLL_REG;
+        state <= POLL_REG;
         mem_sel <= 1'b0;
         mem_rd <= 1'b0;
         mem_addr <= 'h0;
@@ -110,18 +112,18 @@ always @(posedge clk) begin
         mem_byte_enable <= 'h0;
         mem_wr <= 1'b0;
 
-        drr3_read_start_out <= 'h0;
+        ddr3_read_start_out <= 'h0;
         wps_send_start_out <= 1'b0;
         onchip_mem_read_start_out <= 1'b0;
     end else begin
-        drr3_read_start_out <= 1'b0;
+        ddr3_read_start_out <= 1'b0;
         onchip_mem_read_start_out <= 1'b0;
         wps_send_start_out <= 1'b0;
         mem_wr <= 1'b0;
         mem_sel <= 1'b0;
         mem_rd <= 1'b0;
         mem_byte_enable <= 'h0;
-        case (stsate)
+        case (state)
             POLL_REG: begin
                 // If poll more than one onchip memory address, add a counter
                 mem_sel <= poll_reg_timer_out;
@@ -132,15 +134,17 @@ always @(posedge clk) begin
                     start_play_reg <= onchip_mem_read_data[`START_PLAY_REG_OFFSET];
                     pattern_source_reg <= onchip_mem_read_data[`PATTERN_SOURCE_REG_OFFSET];
                     play_done_reg <= 1'b0;
+                    rsv2_reg <= onchip_mem_read_data[`RSV2_OFFSET : (`PLAY_DONE_REG_OFFSET + 1)];
                     rsv0_reg <= onchip_mem_read_data[`RSV0_OFFSET : (`TO_SEND_FRAME_REG_OFFSET + 1)];
-                    to_send_frame_reg <= onchip_mem_read_data[`TO_SEND_FRAME_REG_OFFSET : (`ONE_FRAME_REG_OFFSE + 1)]
+                    to_send_frame_reg <= onchip_mem_read_data[`TO_SEND_FRAME_REG_OFFSET : (`ONE_FRAME_REG_OFFSET + 1)];
                     one_frame_byte_reg <= onchip_mem_read_data[`ONE_FRAME_REG_OFFSET : (`PATTERN_H_PIX_REG_OFFSET + 1)];
                     pattern_h_pix_reg <= onchip_mem_read_data[`PATTERN_H_PIX_REG_OFFSET : (`PATTERN_V_LINE_REG_OFFSET + 1)];
-                    pattern_v_line_reg <= onchip_mem_read_data[`PATTERN_V_LINE_REG_OFFSET : (`TO_SEND_TOTAL_BYTE_REG_H_OFFSET + 1)];
-                    to_send_total_byte_reg <= onchip_mem_read_data[`TO_SEND_TOTAL_BYTE_REG_H_OFFSET: (`TO_SEND_TOTAL_BYTE_REG_OFFSET + 1)];
+                    pattern_v_line_reg <= onchip_mem_read_data[`PATTERN_V_LINE_REG_OFFSET : (`TO_SEND_TOTAL_BYTE_REG_OFFSET + 1)];
+                    to_send_total_byte_reg <= onchip_mem_read_data[`TO_SEND_TOTAL_BYTE_REG_OFFSET: (`START_ADDR_REG_OFFSET + 1)];
 
-                    start_addr_reg <= onchip_mem_read_data[`START_ADDR_REG_OFFSET : (RSV1_OFFSET + 1)];
-                    rsv1_reg <= onchip_mem_read_data[`RSV1_OFFSET : 0];
+                    start_addr_reg <= onchip_mem_read_data[`START_ADDR_REG_OFFSET : (`RSV1_OFFSET + 1)];
+                    rsv1_reg <= onchip_mem_read_data[`RSV1_OFFSET : (`RSV3_OFFSET + 1)];
+                    rsv3_reg <= onchip_mem_read_data[`RSV3_OFFSET : 0];
                     mem_sel <= 1'b0;
                     mem_rd <= 1'b0;
                     state <= ISSUE_CMD;
@@ -157,11 +161,12 @@ always @(posedge clk) begin
                 usr_start_addr_out <= start_addr_reg;
                 to_read_byte_out <= to_send_total_byte_reg;
                 to_read_frame_num_out <= to_send_frame_reg;
-
+                one_frame_byte_out <= one_frame_byte_reg;
                 wps_send_start_out <= 1'b1;
-                if (pattern_source_reg) begin
-                    read_start_out <= 1'b1;
+                if (~pattern_source_reg) begin
+                    ddr3_read_start_out <= 1'b1;
                     state <= FETCH_DDR3;
+                    $display("Start to DDR3 Fetch");
                 end
                 else begin
                     onchip_mem_read_start_out <= 1'b1;
@@ -171,6 +176,7 @@ always @(posedge clk) begin
             FETCH_DDR3: begin
                 if (ddr3_read_done_in) begin
                     state <= UPDATE_REG;
+                    $display("DDR3 Fetch Done");
                 end
             end
             FETCH_ONCHIP_MEM: begin
@@ -191,8 +197,10 @@ always @(posedge clk) begin
                 mem_sel <= 1'b1;
                 mem_byte_enable <= 31'h40000000;
                 mem_wr <=1'b1;
-                mem_wr_data <= '{8'h0, 8'h80, 240'h0}; // Assert read_done
+                mem_wr_data <= {8'h0, 8'h80, 240'h0}; // Assert read_done
                 state <= POLL_REG;
+                $display("Update reg Done");
+
             end
             default: state <= POLL_REG;
         endcase // stsate
@@ -204,8 +212,8 @@ poll_reg_timer(
     .clk      (clk),
     .rst_n    (rst),
     .timer_ena(poll_reg_timer_ena),
-    .timer_rst(0),
-    .timer_out(poll_reg_ddr3_timer_out)
+    .timer_rst(1'b0),
+    .timer_out(poll_reg_timer_out)
 );
 
 endmodule

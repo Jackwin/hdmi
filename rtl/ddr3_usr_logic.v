@@ -21,7 +21,7 @@ module ddr3_usr_logic (
     input [26:0]        ddr3_usr_start_addr_in,
     input [31:0]        to_read_frame_num_in,
     input [31:0]        to_read_byte_in,
-    input [19:0]        one_frame_byte_in,
+    input [31:0]        one_frame_byte_in,
     input               ddr3_read_start,
     output              ddr3_read_done_out,
 
@@ -36,34 +36,32 @@ localparam  IDLE = 3'd0,
             FIRST_READ = 3'd1,
             READ = 3'd2,
             WAIT = 3'd3,
-            LAST_READ = 3'd4,
+            LAST_READ = 3'd4;
 reg [2:0]   state;
 //Register
 reg [31:0]  to_read_frame_reg;
 reg [31:0]  to_read_byte_reg;
 reg [26:0]  ddr3_usr_start_addr_reg;
 reg [4:0]   ddr3_usr_offset_addr_reg;
-reg [19:0]  one_frame_byte_reg;
-reg [19:0]  one_frame_left_byte_reg
+reg [31:0]  one_frame_byte_reg;
+reg [31:0]  one_frame_left_byte_reg;
 
 // DDR3 signals
 reg [31:0]  ddr3_data_byte_valid;
 reg [21:0]  ddr3_emif_start_addr_reg;
-reg [31:0]  ddr3_read_cnt;
 reg [12:0]  ddr3_read_valid_r;
 wire        ddr3_read_data_valid;
 reg [4:0]   ddr3_wait_cnt;
 reg         read_done;
 reg [31:0]  frame_cnt;
-reg [19:0]  byte_cnt;
 
-reg [255+32-1:0]    fifo_din;
+reg [255+32:0]    fifo_din;
 reg                 fifo_wr_ena;
 wire                fifo_full;
 wire                fifo_clk;
 wire                fifo_rd_ena;
 wire                fifo_empty;
-wire [255+32-1:0]   fifo_dout;
+wire [255+32:0]   fifo_dout;
 reg                 fifo_dout_valid;
 
 // Output
@@ -73,7 +71,7 @@ assign read_data_out = fifo_dout;
 assign read_data_valid_out = fifo_dout_valid;
 //Generate ddr3 read valid signal and the delay is 13 clock cycles
 always @(posedge ddr3_emif_clk) begin
-    ddr3_read_valid_r[12:0] <= {ddr3_read_valid[11:0], ddr3_emif_read};
+    ddr3_read_valid_r[12:0] <= {ddr3_read_valid_r[11:0], ddr3_emif_read};
 end
 assign ddr3_read_data_valid = ddr3_read_valid_r[12];
 
@@ -98,7 +96,7 @@ always @(posedge ddr3_emif_clk) begin
         ddr3_usr_start_addr_reg <= 'h0;
         ddr3_usr_offset_addr_reg <= 'h0;
         ddr3_emif_start_addr_reg <= 'h0;
-        one_frame_byte_size_reg <= 'h0;
+        one_frame_byte_reg <= 'h0;
         read_done <= 1'b0;
         ddr3_emif_addr <= 0;
         ddr3_emif_read <= 0;
@@ -114,6 +112,7 @@ always @(posedge ddr3_emif_clk) begin
         case(state)
             IDLE: begin
                 if (ddr3_read_start) begin
+                    $display("ddr3_usr_logic: start to read DDR3");
                     to_read_frame_reg <= to_read_frame_num_in;
                     to_read_byte_reg <= to_read_byte_in;
                     one_frame_byte_reg <= one_frame_byte_in;
@@ -189,7 +188,7 @@ always @(posedge ddr3_emif_clk) begin
             */
             READ: begin
                 if (~fifo_full) begin
-                    ddr3_read_data_valid <= 32'hffffffff;
+                    ddr3_data_byte_valid <= 32'hffffffff;
                     ddr3_emif_read <= 1'b1;
                     one_frame_left_byte_reg <= one_frame_left_byte_reg - 6'd32;
                     to_read_byte_reg <= to_read_byte_reg - 6'd32;
@@ -213,9 +212,10 @@ always @(posedge ddr3_emif_clk) begin
                     end
                 end
             end
-            LAST_READ; begin
+            LAST_READ: begin
                 if (~fifo_full) begin
                     ddr3_emif_read <= 1'b1;
+                    $display("ddr3_usr_logic: start to last read DDR3");
                     //ddr3_emif_addr <= ddr3_emif_addr + 1'd1;
                     case(to_read_byte_reg[4:0])
                         5'd0: ddr3_data_byte_valid <= 32'h0;
@@ -255,16 +255,6 @@ always @(posedge ddr3_emif_clk) begin
                     state <= WAIT;
                 end
             end
-            /*
-            LAST_WAIT: begin
-                if (ddr3_read_data_valid) begin
-                    fifo_wr_ena <= 1'b1;
-                    fifo_din <= {ddr3_emif_read_data, ddr3_data_byte_valid};
-                    state <= IDLE;
-                    read_done <= 1'b1;
-                end
-            end
-            */
             default: state <= IDLE;
         endcase // to_read_byte_reg[4:0]
     end
@@ -276,7 +266,7 @@ scfifo_288inx128 ddr3_fifo (
     .rdreq (fifo_rd_ena), //            .rdreq
     .clock (fifo_clk), //            .clk
     .q     (fifo_dout),     // fifo_output.dataout
-    .usedw (), //            .usedw
+    //.usedw (), //            .usedw
     .full  (fifo_full),  //            .full
     .empty (fifo_empty)  //            .empty
 );

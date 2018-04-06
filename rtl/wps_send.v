@@ -4,7 +4,7 @@ module wps_send (
     input           rst_n,
 
     input [31:0]    to_send_frame_num_in,
-    input [23:0]    one_frame_byte_in,
+    input [31:0]    one_frame_byte_in,
     input [31:0]    to_send_byte_in,
     input           start,
 
@@ -18,18 +18,18 @@ module wps_send (
     output reg      h_sync_out,
     output reg      v_sync_out,
     output reg      de_out,
-    output reg [23:0]   pix_data_out
+    output reg [23:0]   pix_data_out,
 
     input           pingpong_ready_in,
-    output          read_pingpong_out,
+    output reg         read_pingpong_out,
     input [23:0]    pingpong_data_in,
-    input           pingpong_data_valid_in,
+    input           pingpong_data_valid_in
 
 );
 
 localparam IDLE = 3'd0,
             WAIT_DATA = 3'd1,
-            SEND_TRIG = 3'd2
+            SEND_TRIG = 3'd2,
             SEND_DATA = 3'd3,
             UPDATE_REG = 3'd4;
 
@@ -41,10 +41,12 @@ reg         de_rising, de_falling;
 reg         h_sync_r, h_sync_rising;
 reg         v_sync_r, v_sync_rising;
 reg [6:0]   pulse_cnt_per_de;
-reg [9:0]   line_cnt;
-reg [23:0]  one_frame_byte_reg;
+reg [10:0]   line_cnt;
+reg [31:0]  one_frame_byte_reg;
 reg [31:0]  fame_num_reg;
 reg [31:0]  frame_cnt;
+reg         delay_timer_ena;
+reg         delay_timer_out;
 
 always @(posedge clk) begin
     h_sync_r <= h_sync_in;
@@ -65,6 +67,7 @@ always @(posedge clk) begin
 
     de_first_offset_line_in_r <= de_first_offset_line_in;
     display_video_left_offset_in_r <= display_video_left_offset_in;
+    delay_timer_ena <= 1'b0;
 end
 
 always @(posedge clk) begin
@@ -79,6 +82,7 @@ always @(posedge clk) begin
         frame_trig <= 1'b0;
         read_pingpong_out <= 1'b0;
         pix_data_out <= 'h0;
+        delay_timer_ena <= 1'b0;
         case(state)
             IDLE: begin
                 if (start & (to_send_frame_num_in != 'h0)) begin
@@ -90,7 +94,10 @@ always @(posedge clk) begin
             // Wait for data flowing to the PingPong Buffer
             WAIT_DATA: begin
                 if (pingpong_ready_in) begin
-                    state <= SEND_TRIG;
+                    delay_timer_ena <= 1'b1;
+                    if (delay_timer_out) begin // Give some time to the interface_256in FIFO to fill in enough data
+                        state <= SEND_TRIG;
+                    end
                 end
             end
             // Send trig to display_vedio_generate_DMD_specific_faster
@@ -113,7 +120,7 @@ always @(posedge clk) begin
                     pix_data_out <= 'h0;
                 end
 
-                if (line_cnt == 10'd1081 & de_falling) begin
+                if (line_cnt == 11'd1081 & de_falling) begin
                     state <= SEND_TRIG;
                     if (frame_cnt == fame_num_reg) begin
                         state <= UPDATE_REG;
@@ -127,9 +134,10 @@ always @(posedge clk) begin
                 fame_num_reg <= 'h0;
                 one_frame_byte_reg <= 'h0;
                 state <= IDLE;
+                $stop;
             end
             default: begin
-                sate <= IDLE;
+                state <= IDLE;
             end
         endcase // state
     end
@@ -168,4 +176,13 @@ always @(posedge clk) begin
         end
     end
 end
+
+timer  # (.MAX(3500))
+delay_timer(
+    .clk      (clk),
+    .rst_n    (rst_n),
+    .timer_ena(delay_timer_ena),
+    .timer_rst(1'b0),
+    .timer_out(delay_timer_out)
+);
 endmodule
