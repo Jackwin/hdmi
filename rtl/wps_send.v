@@ -35,11 +35,12 @@ localparam IDLE = 3'd0,
 
 reg [2:0] state;
 
-reg         de_in_r, de_first_offset_line_in_r;
-reg [23:0]  display_video_left_offset_in_r;
+reg         de_in_r1, de_in_r2, de_in_r3;
+reg         de_first_offset_line_in_r1, de_first_offset_line_in_r2, de_first_offset_line_in_r3;
+reg [23:0]  display_video_left_offset_in_r1, display_video_left_offset_in_r2, display_video_left_offset_in_r3;
 reg         de_rising, de_falling;
-reg         h_sync_r, h_sync_rising;
-reg         v_sync_r, v_sync_rising;
+reg         h_sync_r1, h_sync_r2, h_sync_r3, h_sync_rising;
+reg         v_sync_r1, v_sync_r2, v_sync_r3, v_sync_rising;
 reg [6:0]   pulse_cnt_per_de;
 reg [10:0]   line_cnt;
 reg [31:0]  one_frame_byte_reg;
@@ -49,24 +50,34 @@ reg         delay_timer_ena;
 reg         delay_timer_out;
 
 always @(posedge clk) begin
-    h_sync_r <= h_sync_in;
-    h_sync_rising <= ~h_sync_in & h_sync_r;
+    h_sync_r1 <= h_sync_in;
+    h_sync_r2 <= h_sync_r1;
+    h_sync_r3 <= h_sync_r2;
+    h_sync_rising <= ~h_sync_in & h_sync_r1;
     //h_sync output
-    h_sync_out <= h_sync_r;
+    h_sync_out <= h_sync_r3;
 
-    v_sync_r <= v_sync_in;
-    v_sync_rising <= ~v_sync_r & v_sync_in;
+    v_sync_r1 <= v_sync_in;
+    v_sync_rising <= ~v_sync_r1 & v_sync_in;
     //v_sync output
-    v_sync_out <= v_sync_r;
+    v_sync_r2 <= v_sync_r1;
+    v_sync_r3 <= v_sync_r2;
+    v_sync_out <= v_sync_r3;
 
-    de_in_r <= de_in;
-    de_rising <= ~de_in_r & de_in;
-    de_falling <= ~de_in & de_in_r;
+    de_in_r1 <= de_in;
+    de_rising <= ~de_in_r1 & de_in;
+    de_falling <= ~de_in & de_in_r1;
     // de output
-    de_out <= de_in_r;
+    de_in_r2 <= de_in_r1;
+    de_in_r3 <= de_in_r2;
+    de_out <= de_in_r3;
 
-    de_first_offset_line_in_r <= de_first_offset_line_in;
-    display_video_left_offset_in_r <= display_video_left_offset_in;
+    de_first_offset_line_in_r1 <= de_first_offset_line_in;
+    de_first_offset_line_in_r2 <= de_first_offset_line_in_r1;
+    de_first_offset_line_in_r3 <= de_first_offset_line_in_r2;
+    display_video_left_offset_in_r1 <= display_video_left_offset_in;
+    display_video_left_offset_in_r2 <= display_video_left_offset_in_r1;
+    display_video_left_offset_in_r3 <= display_video_left_offset_in_r2;
     delay_timer_ena <= 1'b0;
 end
 
@@ -110,10 +121,10 @@ always @(posedge clk) begin
             SEND_DATA: begin
                 read_pingpong_out <= de_in & (~de_first_offset_line_in) & (pulse_cnt_per_de < 7'd79);// Brake ahead(<79)
                 //TODO 考虑读取pingpong的延迟和de_in的时序
-                if (de_in_r & de_first_offset_line_in_r) begin
-                    pix_data_out <= display_video_left_offset_in_r;
+                if (de_in_r3 & de_first_offset_line_in_r3) begin
+                    pix_data_out <= display_video_left_offset_in_r3;
                 end
-                else if (de_in_r & pingpong_data_valid_in & ~de_first_offset_line_in_r) begin
+                else if (de_in_r1 & pingpong_data_valid_in & ~de_first_offset_line_in_r1) begin
                     pix_data_out <= pingpong_data_in;
                 end
                 else begin
@@ -148,7 +159,7 @@ always @(posedge clk) begin
     if(~rst_n) begin
         pulse_cnt_per_de <= 'h0;
     end else begin
-        if (de_in_r) begin
+        if (de_in_r1) begin
             if (pulse_cnt_per_de == 7'd81) begin
                 pulse_cnt_per_de <= 'h0;
             end

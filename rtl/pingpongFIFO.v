@@ -25,7 +25,7 @@ reg             ping_fifo_rd_ena;
 wire [23:0]      ping_fifo_dout;
 wire            ping_fifo_empty;
 reg             ping_fifo_dout_valid;
-wire             ping_fifo_rx_ready;
+reg             ping_fifo_rx_ready;
 wire             ping_fifo_tx_ready;
 wire [8:0]      ping_fifo_wr_used;
 wire [8:0]      ping_fifo_rd_used;
@@ -42,7 +42,7 @@ reg             pong_fifo_rd_ena;
 wire [23:0]     pong_fifo_dout;
 wire            pong_fifo_empty;
 reg             pong_fifo_dout_valid;
-wire            pong_fifo_rx_ready;
+reg            pong_fifo_rx_ready;
 wire            pong_fifo_tx_ready;
 wire [8:0]      pong_fifo_wr_used;
 wire [8:0]      pong_fifo_rd_used;
@@ -83,7 +83,7 @@ end
 
 //TODO: check the ping_fifo_ready's effect of the input data
 //rx_clk 250M
-/*
+
 always @(posedge rx_clk) begin
     if (~rx_rst_n) begin
         ping_fifo_rx_ready <= 1'b1;
@@ -98,12 +98,13 @@ always @(posedge rx_clk) begin
         ping_fifo_wr_done <= 1'b1;
     end
 end
-*/
-assign ping_fifo_rx_ready = ping_fifo_wr_used < 9'd479 & ~ping_fifo_full;
-assign pong_fifo_rx_ready = pong_fifo_wr_used < 9'd479 & ~pong_fifo_full;
-assign ping_fifo_tx_ready = ping_fifo_rd_used > 9'd79;
-assign pong_fifo_tx_ready = pong_fifo_rd_used > 9'd79;
-/*
+
+//assign ping_fifo_rx_ready = ping_fifo_wr_used < 9'd479 & ~ping_fifo_full;
+//assign pong_fifo_rx_ready = pong_fifo_wr_used < 9'd479 & ~pong_fifo_full;
+//assign ping_fifo_tx_ready = ping_fifo_rd_used > 9'd79;
+//assign pong_fifo_tx_ready = pong_fifo_rd_used > 9'd79;
+assign ping_fifo_tx_ready = ping_fifo_wr_done;
+assign pong_fifo_tx_ready = pong_fifo_wr_done;
 always @(posedge rx_clk) begin
     if (~rx_rst_n) begin
         pong_fifo_rx_ready <= 1'b1;
@@ -118,7 +119,7 @@ always @(posedge rx_clk) begin
         pong_fifo_wr_done <= 1'b1;
     end
 end
-*/
+
 //---------------------------------------------------
 always @(posedge rx_clk) begin
     if(~rx_rst_n) begin
@@ -213,20 +214,20 @@ always @(posedge tx_clk) begin
             end
             RD_PING: begin
                 if (rd_cnt == 7'd79 & pong_fifo_tx_ready) begin
-                  //  if (pong_fifo_wr_done) begin
+                    //if (pong_fifo_wr_done) begin
                     rd_state <= RD_PONG;
                 end
 
-                if (rd_cnt == 0 & ~pong_fifo_tx_ready)  begin
+                else if (rd_cnt == 7'd79 & ~pong_fifo_tx_ready)  begin
                     rd_state <= RD_IDLE;
                 end
             end
             RD_PONG: begin
                 if (rd_cnt == 7'd79 & ping_fifo_tx_ready) begin
                    // if (ping_fifo_wr_done) begin
-                rd_state <= RD_PING;
+                    rd_state <= RD_PING;
                 end
-                if (rd_cnt == 0 & ~ping_fifo_tx_ready) begin
+                else if (rd_cnt == 7'd79 & ~ping_fifo_tx_ready) begin
                     rd_state <= RD_IDLE;
                 end
             end
@@ -269,8 +270,8 @@ always @(posedge tx_clk) begin
         end
     end
 end
-assign ping_fifo_rd_done = (ping_fifo_rd_ena & (rd_cnt == 7'd79));
-assign pong_fifo_rd_done = (pong_fifo_rd_ena & (rd_cnt == 7'd79));
+assign ping_fifo_rd_done = (ping_fifo_dout_valid & (rd_cnt == 7'd79));
+assign pong_fifo_rd_done = (pong_fifo_dout_valid & (rd_cnt == 7'd79));
 //----------------------------------
 
 always @(posedge tx_clk) begin
@@ -289,6 +290,22 @@ always @(posedge tx_clk) begin
     end
     else begin
         tx_valid <= 1'b0;
+    end
+end
+
+reg [6:0]   tx_data_cnt;
+
+always @(posedge tx_clk) begin
+    if (~tx_rst_n) begin
+        tx_data_cnt <= 'h0;
+    end
+    else begin
+        if (tx_valid) begin
+            tx_data_cnt <= tx_data_cnt + 1'd1;
+        end
+        else begin
+            tx_data_cnt <= 'h0;
+        end
     end
 end
 
