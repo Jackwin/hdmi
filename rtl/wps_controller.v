@@ -16,7 +16,7 @@
 `define PATTERN_V_LINE_REG_OFFSET 144
 `define TO_SEND_TOTAL_BYTE_REG_OFFSET 127
 `define START_ADDR_REG_OFFSET 95
-`define RSV1_OFFSET 63
+`define CAPTURE_PULSE_CYCLE_OFFSET 63
 `define RSV3_OFFSET 31
 module wps_controller (
     input               clk,
@@ -26,6 +26,7 @@ module wps_controller (
     output reg [31:0]   to_read_byte_out,
     output reg [31:0]   to_read_frame_num_out,
     output reg [31:0]   one_frame_byte_out,
+    output reg [31:0]   capture_pulse_cycle_out,
 
     //---Interface to ddr3_usr_logic------
     output reg          ddr3_read_start_out,
@@ -35,6 +36,7 @@ module wps_controller (
     input               onchip_mem_read_done_in,
     // -- Interface to wps_send.v
     output reg          wps_send_start_out,
+
     //
     output              onchip_mem_chip_select,
     output              onchip_mem_clk_ena,
@@ -67,7 +69,7 @@ reg [15:0]  pattern_h_pix_reg;
 reg [15:0]  pattern_v_line_reg;
 reg [31:0]  to_send_total_byte_reg;
 reg [31:0]  start_addr_reg;
-reg [31:0]  rsv1_reg;
+reg [31:0]  capture_pulse_cycle_reg;
 reg [31:0]  rsv3_reg;
 
 reg [2:0]   state;
@@ -114,7 +116,12 @@ always @(posedge clk) begin
 
         ddr3_read_start_out <= 'h0;
         wps_send_start_out <= 1'b0;
-        onchip_mem_read_start_out <= 1'b0;
+
+        usr_start_addr_out <= 'h0;
+        to_read_byte_out <= 'h0;
+        to_read_frame_num_out <= 'h0;
+        one_frame_byte_out <= 'h0;
+        capture_pulse_cycle_out <= 'h0;
     end else begin
         ddr3_read_start_out <= 1'b0;
         onchip_mem_read_start_out <= 1'b0;
@@ -142,9 +149,13 @@ always @(posedge clk) begin
                     pattern_v_line_reg <= onchip_mem_read_data[`PATTERN_V_LINE_REG_OFFSET : (`TO_SEND_TOTAL_BYTE_REG_OFFSET + 1)];
                     to_send_total_byte_reg <= onchip_mem_read_data[`TO_SEND_TOTAL_BYTE_REG_OFFSET: (`START_ADDR_REG_OFFSET + 1)];
 
-                    start_addr_reg <= onchip_mem_read_data[`START_ADDR_REG_OFFSET : (`RSV1_OFFSET + 1)];
-                    rsv1_reg <= onchip_mem_read_data[`RSV1_OFFSET : (`RSV3_OFFSET + 1)];
+                    start_addr_reg <= onchip_mem_read_data[`START_ADDR_REG_OFFSET : (`CAPTURE_PULSE_CYCLE_OFFSET + 1)];
+                    capture_pulse_cycle_reg <= onchip_mem_read_data[`CAPTURE_PULSE_CYCLE_OFFSET : (`RSV3_OFFSET + 1)];
                     rsv3_reg <= onchip_mem_read_data[`RSV3_OFFSET : 0];
+
+                end
+
+                if (start_play_reg) begin
                     mem_sel <= 1'b0;
                     mem_rd <= 1'b0;
                     state <= ISSUE_CMD;
@@ -156,12 +167,14 @@ always @(posedge clk) begin
                     mem_byte_enable <= 32'h40000000; //de-assert play_done reg
                     mem_addr <= 'h0;
                 end
+
             end
             ISSUE_CMD: begin
                 usr_start_addr_out <= start_addr_reg;
                 to_read_byte_out <= to_send_total_byte_reg;
                 to_read_frame_num_out <= to_send_frame_reg;
                 one_frame_byte_out <= one_frame_byte_reg;
+                capture_pulse_cycle_out <= capture_pulse_cycle_reg;
                 wps_send_start_out <= 1'b1;
                 if (~pattern_source_reg) begin
                     ddr3_read_start_out <= 1'b1;
@@ -171,6 +184,7 @@ always @(posedge clk) begin
                 else begin
                     onchip_mem_read_start_out <= 1'b1;
                     state <= FETCH_ONCHIP_MEM;
+                    $display("Start to onchip memory Fetch");
                 end
             end
             FETCH_DDR3: begin
@@ -182,6 +196,7 @@ always @(posedge clk) begin
             FETCH_ONCHIP_MEM: begin
                 if (onchip_mem_read_done_in) begin
                     state <= UPDATE_REG;
+                    $display("onchip memory Fetch Done");
                 end
             end
             UPDATE_REG: begin
@@ -210,7 +225,7 @@ end
 timer  # (.MAX(256))
 poll_reg_timer(
     .clk      (clk),
-    .rst_n    (rst),
+    .rst_n    (rst_n),
     .timer_ena(poll_reg_timer_ena),
     .timer_rst(1'b0),
     .timer_out(poll_reg_timer_out)

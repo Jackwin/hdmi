@@ -211,6 +211,8 @@ wire                hdmi_tx_int_n;
 
 // --------------- ADC signals declaration -----------------
 wire                or_led;
+// -------------- Capture signals
+wire                capture_pulse_out;
 
 assign user_led_r[0] = shrink_led;
 assign user_led_r[1] = pll_led;
@@ -307,7 +309,7 @@ wire [4:0]    ddr3_burst_count;
 wire          ddr3_begin_burst;
 wire [31:0]   ddr3_byte_ena;
 
-/*
+
 fast_wps_nios_top fast_wps_nios_top_i (
     .clk50m_in              (clkin_50),
     .reset_n                (cpu_resetn),
@@ -368,10 +370,12 @@ fast_wps_nios_top fast_wps_nios_top_i (
     .hdmi_tx_bd             (hdmi_tx_bd),
     .hdmi_tx_de             (hdmi_tx_de),
     .hdmi_tx_vs             (hdmi_tx_vs),
-    .hdmi_tx_hs             (hdmi_tx_hs)
+    .hdmi_tx_hs             (hdmi_tx_hs),
+
+    .capture_pulse_out     (capture_pulse_out)
 
    );
-*/
+
 // PCI-e signals
 wire L0_led, alive_led, comp_led, gen2_led, gen3_led;
 wire [3:0] lane_active_led;
@@ -497,7 +501,7 @@ timer_inst(
     .timer_out(start)
 
     );
-/*
+
 // Generate data for DDR testing
 
 // DDR write

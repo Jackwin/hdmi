@@ -3,7 +3,7 @@
 # # as: vsim -c -do mentor.do
 # #
 # Create a library
-#vlib fifo_170
+vlib fifo_170
 #vlib altera_fpdsp_block_161
 #vlib fp_dsp
 #vlib fp_add
@@ -15,11 +15,16 @@
 #vlib iopll
 # Set path
 #set PRO_DIR "/home/chunjie/workspace/mld/a10_soc/mld_10G_ethernet/mld_10g"
-set PRO_DIR "E:/chunjie/fast-wps/niosII_fast_wps"
+#set WINDOWS
+#set PRO_DIR "E:/chunjie/fast-wps/niosII_fast_wps"
+#set QSYS_SIMDIR "E:/chunjie/fast-wps/niosII_fast_wps/IP"
+
+set PRO_DIR "/home/chunjie/workspace/altera_project/stratix5/niosII_fast_wps"
+set QSYS_SIMDIR "/home/chunjie/workspace/altera_project/stratix5/niosII_fast_wps/IP"
 #set PRO_CORE "/home/chunjie/workspace/mld/a10_soc/mld_10G_ethernet"
 #set IP_DIR "/home/chunjie/*/altera_project/FAccel/IP/fp_dsp/sim"
 #set QSYS_SIMDIR "/home/chunjie/workspace/mld/a10_soc/*/IP"
-set QSYS_SIMDIR "E:/chunjie/fast-wps/niosII_fast_wps/IP"
+
 # # Source the generated sim script
 source msim_setup.tcl
 ##source $QSYS_SIMDIR/fp_add/sim/mentor/msim_setup.tcl
@@ -70,6 +75,8 @@ vlog -sv $PRO_DIR/software/hdmi/rtl/pingpongFIFO.v
 vlog -sv $PRO_DIR/software/hdmi/rtl/timer.v
 vlog -sv $PRO_DIR/software/hdmi/rtl/wps_send.v
 vlog -sv $PRO_DIR/software/hdmi/rtl/display_vedio_generate_DMD_specific_faster.v
+vlog -sv $PRO_DIR/software/hdmi/rtl/pulse_gen.v
+vlog -sv $PRO_DIR/software/hdmi/rtl/onchip_mem_usr_logic.v
  set TOP_LEVEL_NAME wps_top_tb
 
 # # Elaborate the design.

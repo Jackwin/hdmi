@@ -30,21 +30,23 @@ module wps_top (
     output              h_sync_out,
     output              v_sync_out,
     output              de_out,
-    output  [23:0]      pix_data_out
+    output  [23:0]      pix_data_out,
+    output              capture_pulse_out
 
 );
 wire [31:0]     usr_start_addr;
 wire [31:0]     to_read_byte;
 wire [31:0]     to_read_frame_num;
 wire [31:0]     one_frame_byte;
+wire [31:0]     capture_pulse_cycle;
 
-wire            drr3_read_start;
+wire            ddr3_read_start;
 wire            ddr3_read_done;
 wire            onchip_mem_read_start;
 wire            onchip_mem_read_done;
 wire            wps_send_start;
 //onchip_mem_usr_logic
-reg            onchip_mem_usr_logic_read_req;
+reg             onchip_mem_usr_logic_read_req;
 wire            onchip_mem_usr_logic_data_ready;
 wire [255+32:0] onchip_mem_usr_logic_read_data;
 wire            onchip_mem_usr_logic_read_data_valid;
@@ -53,12 +55,14 @@ reg             onchip_mem_usr_logic_read_r;
 reg             onchip_mem_usr_logic_read_valid;
 wire            onchip_mem_usr_logic_chip_select;
 wire [12:0]     onchip_mem_usr_logic_addr;
+wire            onchip_mem_usr_clk_ena;
 // wps_controller
 wire            onchip_mem_wps_controller_read;
 reg             onchip_mem_wps_controller_read_r;
 reg             onchip_mem_wps_controller_read_valid;
 wire            onchip_mem_wps_controller_chip_select;
 wire [12:0]     onchip_mem_wps_controller_addr;
+wire            onchip_mem_wps_controller_clk_ena;
 
 // ddr3_usr_logic signals
 reg             ddr3_usr_logic_read_req;
@@ -122,7 +126,7 @@ ddr3_usr_logic ddr3_usr_logic_inst (
     .read_data_valid_out   (ddr3_usr_logic_read_data_valid)
 );
 
-/*
+
 onchip_mem_usr_logic onchip_mem_usr_logic_inst (
     .clk                     (mem_clk),
     .rst_n                   (mem_rst_n),
@@ -144,7 +148,7 @@ onchip_mem_usr_logic onchip_mem_usr_logic_inst (
     .read_data_valid_out     (onchip_mem_usr_logic_read_data_valid)
 
 
-); */
+);
 
 wps_controller wps_controller_inst (
     .clk                      (mem_clk),
@@ -154,6 +158,7 @@ wps_controller wps_controller_inst (
     .to_read_byte_out         (to_read_byte),
     .to_read_frame_num_out    (to_read_frame_num),
     .one_frame_byte_out       (one_frame_byte),
+    .capture_pulse_cycle_out  (capture_pulse_cycle),
 
     .ddr3_read_start_out      (ddr3_read_start),
     .ddr3_read_done_in        (ddr3_read_done),
@@ -256,6 +261,7 @@ wps_send wps_send_inst (
     .to_send_frame_num_in  (to_read_frame_num),
     .to_send_byte_in       (to_read_byte),
     .one_frame_byte_in     (one_frame_byte),
+    .pulse_cycle_in        (capture_pulse_cycle),
     .start                 (wps_send_start),
 
     .frame_trig            (frame_start_trig),
@@ -269,6 +275,7 @@ wps_send wps_send_inst (
     .v_sync_out            (v_sync_out),
     .de_out                (de_out),
     .pix_data_out          (pix_data_out),
+    .capture_pulse_out     (capture_pulse_out),
 
     .pingpong_ready_in      (pingpongFIFO_ready),
     .read_pingpong_out      (pingpongFIFO_read),

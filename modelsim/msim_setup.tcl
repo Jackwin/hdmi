@@ -252,10 +252,10 @@ alias com {
 
     # wps_top_tb
    # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/scfifo_288inx128/fifo_170/sim/scfifo_288inx128_fifo_170_i6fkd6y.v" -work fifo_170
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_288inx128.v" -work fifo_170
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_288inx128_18out.v" -work fifo_170
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_16inx8192.v" -work fifo_170
-    eval  vlog $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_24inx512.v" -work fifo_170
+    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_288inx128.v" -work fifo_170
+    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_288inx128_18out.v" -work fifo_170
+    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/scfifo_16inx8192.v" -work fifo_170
+    eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS     "$QSYS_SIMDIR/dcfifo_24inx512.v" -work fifo_170
    # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dpram_32inx64/ram_2port_170/sim/dpram_32inx64_ram_2port_170_polr63i.v" -work ram_2port_170
    # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dpram_135inx512/ram_2port_170/sim/dpram_135inx512_ram_2port_170_xj5kcoy.v" -work ram_2port_170
    # eval  vlog -sv $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/dpram_16inx16/ram_2port_170/sim/dpram_16inx16_ram_2port_170_iols3si.v" -work ram_2port_170

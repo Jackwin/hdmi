@@ -5,7 +5,7 @@ module onchip_mem_usr_logic (
    input                rst_n,
 
     output reg          onchip_mem_chip_select,
-    output reg          onchip_mem_clk_ena,
+    output              onchip_mem_clk_ena,
     output reg          onchip_mem_read,
     output reg [12:0]   onchip_mem_addr,
     input               onchip_mem_read_valid,
@@ -14,7 +14,7 @@ module onchip_mem_usr_logic (
     input [17:0]        onchip_mem_start_addr_in,
     input [31:0]        to_read_byte_in,
     input               onchip_mem_read_start_in,
-    output              onchip_mem_read_done_out,
+    output reg          onchip_mem_read_done_out,
 
     input               read_req_in,
     output              data_ready_out,
@@ -24,10 +24,10 @@ module onchip_mem_usr_logic (
 );
 
 localparam  IDLE = 3'd0,
-            FIRST_READ = 3'd1,;
+            FIRST_READ = 3'd1,
             READ = 3'd2,
             WAIT = 3'd3,
-            LAST_READ = 3'd4,
+            LAST_READ = 3'd4;
 
 reg [2:0]   state;
 // Register
@@ -37,13 +37,13 @@ reg [12:0]  onchip_mem_start_addr_reg;
 reg [31:0]  onchip_mem_data_byte_valid;
 
 // FIFO
-reg [255+32-1:0]    fifo_din;
+reg [255+32:0]    fifo_din;
 reg                 fifo_wr_ena;
 wire                fifo_full;
 wire                fifo_clk;
 wire                fifo_rd_ena;
 wire                fifo_empty;
-wire [255+32-1:0]   fifo_dout;
+wire [255+32:0]   fifo_dout;
 reg                 fifo_dout_valid;
 
 assign onchip_mem_clk_ena = 1'b1;
@@ -52,7 +52,7 @@ assign read_data_out = fifo_dout;
 assign read_data_valid_out = fifo_dout_valid;
 
 // FIFO
-assign fifo_clk = ddr3_emif_clk;
+assign fifo_clk = clk;
 assign fifo_rd_ena = read_req_in;
 
 always @(posedge clk) begin
@@ -67,7 +67,7 @@ end
 // The read latency is 2 for the onchip memory
 /*
 always @(posedge clk) begin
-    mem_rd_r <= mem_rd;
+    mem_rd_r <= onchip_mem_read;
     mem_rd_valid <= mem_rd_r;
 end
 */
@@ -78,10 +78,10 @@ always @(posedge clk) begin
         onchip_mem_start_addr_reg <= 'h0;
         fifo_wr_ena <= 1'b0;
         onchip_mem_read_done_out <= 1'b0;
-        mem_rd <= 1'b0;
+        onchip_mem_read <= 1'b0;
     end else begin
         fifo_wr_ena <= 1'b0;
-        mem_rd <= 1'b0;
+        onchip_mem_read <= 1'b0;
          case(state)
             IDLE: begin
                 if (onchip_mem_read_start_in) begin
@@ -128,7 +128,7 @@ always @(posedge clk) begin
             FIRST_READ: begin
                 if (~fifo_full) begin
                     onchip_mem_chip_select <= 1'b1;
-                    mem_rd <= 1'b1;
+                    onchip_mem_read <= 1'b1;
                     onchip_mem_addr <= onchip_mem_start_addr_reg;
                     to_read_left_byte_reg <= to_read_left_byte_reg - (6'd32 - onchip_mem_addr[4:0]);
                     state <= WAIT;
@@ -154,7 +154,7 @@ always @(posedge clk) begin
             READ: begin
                 if (~fifo_full) begin
                     onchip_mem_chip_select <= 1'b1;
-                    mem_rd <= 1'b1;
+                    onchip_mem_read <= 1'b1;
                     onchip_mem_data_byte_valid <= 32'hffffffff;
                     to_read_left_byte_reg <= to_read_left_byte_reg - 6'd32;
                     state <= WAIT;
@@ -163,7 +163,7 @@ always @(posedge clk) begin
             LAST_READ: begin
                 if (~fifo_full) begin
                     onchip_mem_chip_select <= 1'b1;
-                    mem_rd <= 1'b1;
+                    onchip_mem_read <= 1'b1;
                     to_read_left_byte_reg <= 'h0;
                      case(to_read_byte_reg[4:0])
                         5'd0: onchip_mem_data_byte_valid <= 32'h0;

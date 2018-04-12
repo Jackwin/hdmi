@@ -76,7 +76,9 @@ output              vpg_hs,
 output              vpg_vs,
 output    [7:0]     vpg_r,
 output    [7:0]     vpg_g,
-output    [7:0]     vpg_b
+output    [7:0]     vpg_b,
+
+output              capture_pulse_out
 );
 
 
@@ -187,9 +189,53 @@ wire  gen_de/*synthesis keep*/;
 wire [7:0]    gen_r/*synthesis keep*/;
 wire [7:0]    gen_g/*synthesis keep*/;
 wire [7:0]    gen_b/*synthesis keep*/;
+wire            h_sync_out, v_sync_out, de_out;
+wire [23:0]     pix_data_out;
+assign vpg_pclk = clk_148_5;
+assign vpg_de     = de_out;
+assign vpg_hs     = h_sync_out;
+assign vpg_vs     = v_sync_out;
+assign vpg_r     = pix_data_out[23:16];
+assign vpg_g     = pix_data_out[15:8];
+assign vpg_b     = pix_data_out[7:0];
+
+
+wps_top wps_top_inst (
+    .mem_clk               (ddr3_emif_clk),
+    .mem_rst_n             (ddr3_emif_rst_n),
+    .ddr3_emif_ready       (ddr3_emif_ready),
+    .ddr3_emif_read_data   (ddr3_emif_read_data),
+    .ddr3_emif_rddata_valid(ddr3_emif_rddata_valid),
+    .ddr3_emif_read        (ddr3_emif_read),
+    .ddr3_emif_write       (ddr3_emif_write),
+    .ddr3_emif_addr        (ddr3_emif_addr),
+    .ddr3_emif_write_data  (ddr3_emif_write_data),
+    .ddr3_emif_byte_enable (ddr3_emif_byte_enable),
+    .ddr3_emif_burst_count (ddr3_emif_burst_count),
+
+    .onchip_mem_chip_select(onchip_mem_chip_select),
+    .onchip_mem_clk_ena    (onchip_mem_clken),
+    .onchip_mem_addr       (onchip_mem_addr),
+    .onchip_mem_byte_enable(onchip_mem_byte_enable),
+    .onchip_mem_write_data (onchip_mem_write_data),
+    .onchip_mem_write      (onchip_mem_write),
+    .onchip_mem_read_data  (onchip_mem_rddata),
+
+    .clk250m               (ddr3_emif_clk),
+    .clk250m_rst_n         (ddr3_emif_rst_n),
+
+    .clk148_5m             (clk_148_5),
+    .clk148_5m_rst_n       (reset_n),
+    .h_sync_out            (h_sync_out),
+    .v_sync_out            (v_sync_out),
+    .de_out                (de_out),
+    .pix_data_out          (pix_data_out),
+    .capture_pulse_out     (capture_pulse_out)
+
+    );
 
 //convert time: 1-clock
-
+/*
 pattern_gen pattern_gen_inst(
     .reset_n(vpg_pll_locked & ~mode_change),
     .pixel_clk(clk_148_5),
@@ -215,7 +261,7 @@ assign vpg_vs     = gen_vs;
 assign vpg_r     = gen_r;
 assign vpg_g     = gen_g;
 assign vpg_b     = gen_b;
-
+*/
 // Load DMD pattern from DDR3 and gennerate HDMI standard signals
 /*
 pattern_fetch_send pattern_fetch_send_inst (
@@ -260,7 +306,7 @@ pattern_fetch_send pattern_fetch_send_inst (
     .gen_g                (gen_g),
     .gen_b                (gen_b)
     );
-*/
+
 
 wire           hsync_o_with_camera_format;//active high
 wire           vsync_o_with_camera_format;//active low
@@ -278,7 +324,7 @@ wire           dmd_flip_left_and_right;//flip left and right //left right flip: 
 wire [10:0]    frame_count;
 
 wire          h_sync_hdmi, v_sync_hdmi, de_hdmi;
-/*
+
 display_vedio_generate_DMD_specific_faster display_vedio_generate_DMD_specific_faster_inst (
     .clk_i(clk_148_5),
     .rst_ni(vpg_pll_locked),
@@ -345,16 +391,9 @@ fast_pat_fetch fast_pat_fetch_inst (
     .de_out                (de_out),
     .pix_data_out          (pix_data_out)
     );
-
-//===== output
-assign vpg_pclk = clk_148_5;
-assign vpg_de     = de_out;
-assign vpg_hs     = h_sync_out;
-assign vpg_vs     = v_sync_out;
-assign vpg_r     = pix_data_out[23:16];
-assign vpg_g     = pix_data_out[15:8];
-assign vpg_b     = pix_data_out[7:0];
 */
+//===== output
+
 endmodule
 
 

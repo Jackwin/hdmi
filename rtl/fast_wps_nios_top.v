@@ -62,7 +62,9 @@ module fast_wps_nios_top (
     output [11:0]   hdmi_tx_bd,
     output          hdmi_tx_de,
     output          hdmi_tx_vs,
-    output          hdmi_tx_hs
+    output          hdmi_tx_hs,
+    // Capture signal
+    output          capture_pulse_out
 
 );
 
@@ -204,7 +206,8 @@ vpg vpg_inst(
     .vpg_vs     (vpg_vs),
     .vpg_r      (vpg_r),
     .vpg_g      (vpg_g),
-    .vpg_b      (vpg_b)
+    .vpg_b      (vpg_b),
+    .capture_pulse_out     (capture_pulse_out)
     );
 
 //===== source selection, from pattern generator or hdmi-rx

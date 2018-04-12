@@ -172,6 +172,10 @@ always @(posedge rx_clk) begin
 end
 
 always @* begin
+    ping_fifo_din = 'h0;
+    ping_fifo_wr_ena = 1'b0;
+    pong_fifo_din = 'h0;
+    pong_fifo_wr_ena = 1'b0;
     case(wr_state)
         WR_IDLE: begin
             ping_fifo_din = 'h0;
@@ -201,7 +205,6 @@ end
 always @(posedge tx_clk) begin
     if(~tx_rst_n) begin
         rd_state <= RD_IDLE;
-        rd_cnt <= 'h0;
     end else begin
         case(rd_state)
             RD_IDLE: begin

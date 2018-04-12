@@ -41,7 +41,6 @@ reg [2:0]   state;
 //Register
 reg [31:0]  to_read_frame_reg;
 reg [31:0]  to_read_byte_reg;
-reg [26:0]  ddr3_usr_start_addr_reg;
 reg [4:0]   ddr3_usr_offset_addr_reg;
 reg [31:0]  one_frame_byte_reg;
 reg [31:0]  one_frame_left_byte_reg;
@@ -51,9 +50,7 @@ reg [31:0]  ddr3_data_byte_valid;
 reg [21:0]  ddr3_emif_start_addr_reg;
 reg [12:0]  ddr3_read_valid_r;
 wire        ddr3_read_data_valid;
-reg [4:0]   ddr3_wait_cnt;
 reg         read_done;
-reg [31:0]  frame_cnt;
 
 reg [255+32:0]    fifo_din;
 reg                 fifo_wr_ena;
@@ -93,7 +90,6 @@ end
 always @(posedge ddr3_emif_clk) begin
     if(~ddr3_emif_rst_n) begin
         to_read_frame_reg <= 0;
-        ddr3_usr_start_addr_reg <= 'h0;
         ddr3_usr_offset_addr_reg <= 'h0;
         ddr3_emif_start_addr_reg <= 'h0;
         one_frame_byte_reg <= 'h0;
@@ -101,9 +97,7 @@ always @(posedge ddr3_emif_clk) begin
         ddr3_emif_addr <= 0;
         ddr3_emif_read <= 0;
         ddr3_emif_write <= 0;
-        ddr3_wait_cnt <= 0;
         fifo_wr_ena <= 1'b0;
-        frame_cnt <= 0;
         state <= IDLE;
     end else begin
         ddr3_emif_read <= 1'b0;
@@ -117,7 +111,6 @@ always @(posedge ddr3_emif_clk) begin
                     to_read_byte_reg <= to_read_byte_in;
                     one_frame_byte_reg <= one_frame_byte_in;
                     one_frame_left_byte_reg <= one_frame_byte_in;
-                    ddr3_usr_start_addr_reg <= ddr3_usr_start_addr_in;
                     ddr3_emif_start_addr_reg <= ddr3_usr_start_addr_in[26:5];
                     ddr3_usr_offset_addr_reg <= ddr3_usr_start_addr_in[4:0];
                     case(ddr3_usr_start_addr_in[4:0])

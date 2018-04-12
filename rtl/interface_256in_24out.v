@@ -24,7 +24,7 @@ wire [255+32:0]    l1_fifo_din;
 wire            l1_fifo_full;
 wire            l1_fifo_pre_full;
 wire            l1_fifo_rd_clk;
-reg             l1_fifo_rd_ena;
+wire            l1_fifo_rd_ena;
 //wire [8:0]      l1_fifo_dout;
 wire [17:0]      l1_fifo_dout;
 
@@ -38,7 +38,7 @@ wire            l2_fifo_wr_ena;
 wire [15:0]      l2_fifo_din;
 wire            l2_fifo_full;
 wire            l2_fifo_clk;
-reg             l2_fifo_rd_ena;
+wire            l2_fifo_rd_ena;
 wire [15:0]     l2_fifo_dout;
 reg [15:0]      l2_fifo_dout_r1;
 wire            l2_fifo_empty;
